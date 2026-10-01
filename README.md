@@ -27,13 +27,13 @@ empty). Summaries are internal memory only and are never posted to Discord.
 
 ## stack (decided)
 
-| piece           | choice                                             | notes                                                                                                  |
-| --------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| bot framework   | discord.js v14                                     | ecosystem default                                                                                      |
-| runtime         | bun                                                | gateway/voice have tracked bun issues — spike-test resume before trusting (bun#2077, discord.js#10840) |
-| storage         | postgres + drizzle-orm (postgres-js)               | `bun run db:push`; schema in `src/db/schema.ts`                                                        |
-| AI layer (core) | Vercel AI SDK (`ai` + `@ai-sdk/openai-compatible`) | OpenAI-compatible endpoint; no Ollama (LM Studio / llama.cpp `llama-server` work)                      |
-| tooling         | oxlint + oxfmt --check + tsc --noEmit, vitest      | `bun run check`                                                                                        |
+| piece           | choice                                             | notes                                                                                                                                                                                      |
+| --------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| bot framework   | discord.js v14                                     | ecosystem default                                                                                                                                                                          |
+| runtime         | bun                                                | spike 2026-10: S1–S4 PASS on bun 1.4.2 (client, REST 401, gateway Hello/4004, clean self-exit) — node 24 identical as fallback. S5 (network-resume, tracked bun#2077) pending a real token |
+| storage         | postgres + drizzle-orm (postgres-js)               | `bun run db:push`; schema in `src/db/schema.ts`                                                                                                                                            |
+| AI layer (core) | Vercel AI SDK (`ai` + `@ai-sdk/openai-compatible`) | OpenAI-compatible endpoint; no Ollama (LM Studio / llama.cpp `llama-server` work)                                                                                                          |
+| tooling         | oxlint + oxfmt --check + tsc --noEmit, vitest      | `bun run check`                                                                                                                                                                            |
 
 AI endpoint configuration comes from `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL`.
 Use an OpenAI-compatible server such as LM Studio (`http://localhost:1234/v1`),
