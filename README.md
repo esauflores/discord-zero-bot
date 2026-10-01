@@ -1,4 +1,4 @@
-# discord-bot
+# zero-discord-bot
 
 A silent per-channel note-taker that stores Discord messages with author and timestamp attribution. The v4 shape and storage/retrieval decisions are documented in [NOTES.md](./NOTES.md).
 
