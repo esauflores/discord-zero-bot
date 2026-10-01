@@ -13,15 +13,17 @@ empty means all channels.
 
 **every message** (`src/events/messageCreate.ts`): skip bots and disallowed
 channels → `record()` → if mentioned or replying to one of the bot's messages,
-fetch the last 50 messages for that channel and answer in-channel using the AI
-SDK. Ordinary conversation remains silent. `discord_id` is unique with
-`onConflictDoNothing`, so redelivered gateway events never create duplicates.
+fetch the last 50 messages plus the latest summary and answer in-channel using
+the AI SDK. Replies can call `search_memory` for channel history and `web_search`
+(Tavily; optional `SEARCH_API_KEY`) for external research. Ordinary conversation
+remains silent. `discord_id` is unique with `onConflictDoNothing`, so redelivered
+gateway events never create duplicates.
 
-**memory is just queries** (`src/db/messages.ts`) — no merge job:
-
-- `context(channel, 24h)` — the short memory: what people said in the last day
-- `recent(channel, 50)` — last messages
-- large memory = the same table without the time cutoff
+**memory** (`src/db/messages.ts`, `src/db/summaries.ts`): raw messages remain the
+source of truth; short memory is recent messages, and summaries are derived
+large memory. Every `SUMMARY_INTERVAL_MINUTES` (default 60), the bot summarizes
+new messages in the configured channels (or all channels when `CHANNEL_IDS` is
+empty). Summaries are internal memory only and are never posted to Discord.
 
 ## stack (decided)
 
@@ -69,6 +71,8 @@ llama.cpp `llama-server` (`http://localhost:8080/v1`), or another compatible API
 cp .env.example .env     # set DISCORD_TOKEN, DATABASE_URL, and AI_* values
 # optionally set CHANNEL_IDS to a comma-separated channel allowlist
 # empty CHANNEL_IDS means every channel
+# SUMMARY_INTERVAL_MINUTES controls internal summary cadence (default 60)
+# SEARCH_API_KEY enables Tavily web research in mention-triggered replies
 # AI_BASE_URL is the OpenAI-compatible endpoint, e.g. localhost:1234/v1
 # AI_API_KEY can be a placeholder for local servers that don't require one
 # AI_MODEL is the model identifier exposed by the server
