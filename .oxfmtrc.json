@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "tabWidth": 2,
+  "printWidth": 120,
+  "sortImports": {
+    "order": "asc",
+    "newlinesBetween": true,
+    "internalPattern": ["@/"],
+    "groups": [["builtin", "external"], "internal", ["parent", "sibling", "index"], "style", "unknown"]
+  }
+}
