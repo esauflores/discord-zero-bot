@@ -1,8 +1,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText, stepCountIs } from "ai";
 
-import { chatEndpoint } from "../models.ts";
-import { systemPrompt } from "../prompt.ts";
+import { chatEndpoint } from "../ai/models.ts";
 import { generateImageTool } from "../tools/generate-image/index.ts";
 import { openAttachment } from "../tools/open-attachment/index.ts";
 import { reactToMessage } from "../tools/react/index.ts";
@@ -10,6 +9,7 @@ import { readChat } from "../tools/read-chat/index.ts";
 import { respondInDiscord } from "../tools/respond-in-discord/index.ts";
 import { webSearch } from "../tools/web-search/index.ts";
 import type { Stage } from "./context.ts";
+import { systemPrompt } from "./prompt.ts";
 
 const apiKey = process.env.AI_API_KEY;
 if (!apiKey) throw new Error("AI_API_KEY is required");

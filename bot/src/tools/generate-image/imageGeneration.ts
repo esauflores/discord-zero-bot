@@ -1,4 +1,4 @@
-import { imageEndpoint, imageModel } from "../../models.ts";
+import { imageEndpoint, imageModel } from "../../ai/models.ts";
 
 const apiKey = process.env.AI_API_KEY;
 const model = imageModel;

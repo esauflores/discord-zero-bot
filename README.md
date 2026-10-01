@@ -32,14 +32,15 @@ Hello/4004, clean self-exit. Node 24 behaves identically as a fallback. S5,
 network resume after a gateway drop, is still unverified: it needs a real bot
 token and tracks bun#2077.
 
-`bot/src/` is four groups, so a change lands in one place:
+`bot/src/` is five groups, so a change lands in one place:
 
-| group       | files                                                        | what belongs there                                                   |
-| ----------- | ------------------------------------------------------------ | -------------------------------------------------------------------- |
-| `pipeline/` | `context`, `effects`, `gate`, `enrich`, `respond`, `deliver` | the chain every message runs: one `Stage` per file                   |
-| `media/`    | `types`, `storage`, `audio`, `index`                         | turning an attachment into text, plus Discord→SeaweedFS storage      |
-| `tasks/`    | `index`                                                      | background work that outlives the message that started it            |
-| `tools/`    | six capabilities                                             | what the model can call; they record effects, never write to Discord |
+| group       | files                                                                             | what belongs there                                                   |
+| ----------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `ai/`       | `models`, `classify`                                                              | endpoint + model ids, and the Jev classifier that picks one          |
+| `pipeline/` | `context`, `effects`, `persist`, `gate`, `enrich`, `respond`, `deliver`, `prompt` | the chain every message runs: one `Stage` per file, plus the persona |
+| `media/`    | `types`, `storage`, `audio`, `index`                                              | turning an attachment into text, plus Discord→SeaweedFS storage      |
+| `tasks/`    | `index`                                                                           | background work that outlives the message that started it            |
+| `tools/`    | six capabilities                                                                  | what the model can call; they record effects, never write to Discord |
 
 Adding a capability is a `Stage` appended to `chatStages` in `pipeline/index.ts`.
 Adding a media type (image captions, say) is a `Processor` appended to `processors`
@@ -53,9 +54,11 @@ reply and one reaction per message.
 can restrict both recording and replies to a comma-separated set of channel IDs;
 empty means all channels.
 
-**every message** (`bot/src/events/messageCreate.ts`): skip bots and disallowed
-channels → `record()` (including the bot's own replies) → `runChat()` through the chain above.
-`gate` classifies the current message with Jev 1.13 using the previous 10 messages. Jev decides both whether
+**every message** (`bot/src/events/messageCreate.ts`): scope check, then `runChat()`
+through the chain: `persist` records the message and archives its media (including
+our own replies, so follow-ups keep their referent), `gate` classifies the current
+message with Jev 1.13 using the previous 10 messages and stops the chain for any
+bot message. Jev decides both whether
 it was addressed and whether a reply needs a smarter model. Direct mentions/replies
 always count as addressed, but still use Jev to select the model. Simple replies
 use `qwen/qwen3.7-flash`; complex replies use `deepseek/deepseek-v4.1-flash`.
@@ -107,7 +110,7 @@ remove existing summary rows, so back them up first if needed.
 | tooling         | oxlint + oxfmt --check + tsc --noEmit, vitest      | `bun run check`                                                                                |
 
 `AI_API_KEY` is all the AI layer needs: OpenRouter is the only endpoint, and it is
-hardcoded in `bot/src/models.ts` because the Decisions API is exclusive to it. Model IDs
+hardcoded in `bot/src/ai/models.ts` because the Decisions API is exclusive to it. Model IDs
 live in the same folder. Address detection and model
 routing use its [Jev Decisions API](https://openrouter.ai/docs/guides/community/jev-tutorial)
 (`typesafe/jev-1.13`); local OpenAI-compatible servers do not offer this endpoint

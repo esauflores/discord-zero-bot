@@ -4,10 +4,16 @@ import type { ChatContext, Stage } from "./context.ts";
 import { deliver } from "./deliver.ts";
 import { enrich } from "./enrich.ts";
 import { gate } from "./gate.ts";
+import { record } from "./record.ts";
 import { respond } from "./respond.ts";
 
+/** Stores the message and archives its media, before anything decides to answer. */
+const persist: Stage = async (ctx) => {
+  await record(ctx.message);
+};
+
 /** The chain every message runs through. Append a stage to add a behavior. */
-const chatStages = [gate, enrich, respond, deliver];
+const chatStages = [persist, gate, enrich, respond, deliver];
 
 function timingLine(ctx: ChatContext): string {
   const parts = Object.entries(ctx.timings).map(([name, ms]) => `${name}=${ms}ms`);

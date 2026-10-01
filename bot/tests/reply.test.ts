@@ -21,7 +21,10 @@ vi.mock("@discord-zero-bot/database/messages", () => ({ recent: mocks.recent }))
 vi.mock("@discord-zero-bot/database/search", () => ({ searchMemory: mocks.search }));
 vi.mock("@discord-zero-bot/storage", () => ({ download: mocks.download }));
 vi.mock("../src/tools/generate-image/imageGeneration.ts", () => ({ generateImage: mocks.image }));
-vi.mock("../src/classify.ts", () => ({ classifyMessage: mocks.classify, cheapModel: "qwen/qwen3.7-flash" }));
+// The persist stage is covered by pipeline.record.test.ts; here it is stubbed so
+// these tests exercise the answering chain without database or storage.
+vi.mock("../src/pipeline/record.ts", () => ({ record: vi.fn() }));
+vi.mock("../src/ai/classify.ts", () => ({ classifyMessage: mocks.classify, cheapModel: "qwen/qwen3.7-flash" }));
 
 beforeAll(() => {
   process.env.AI_API_KEY = "test";

@@ -1,11 +1,10 @@
 import type { Message } from "discord.js";
 import { expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ record: vi.fn(), reply: vi.fn() }));
-vi.mock("../src/archive/record.ts", () => ({ record: mocks.record }));
-vi.mock("../src/pipeline/index.ts", () => ({ runChat: mocks.reply }));
+const mocks = vi.hoisted(() => ({ runChat: vi.fn() }));
+vi.mock("../src/pipeline/index.ts", () => ({ runChat: mocks.runChat }));
 
-it("lets the model decide whether to respond to an ordinary channel message", async () => {
+it("hands an ordinary channel message to the chain", async () => {
   vi.stubEnv("GUILD_ID", "");
   vi.stubEnv("CHANNEL_IDS", "");
   const { execute } = await import("../src/events/messageCreate.ts");
@@ -15,19 +14,15 @@ it("lets the model decide whether to respond to an ordinary channel message", as
     author: { bot: false, username: "user" },
     content: "hello everyone",
     client: { user: { id: "bot" } },
-    mentions: { has: () => false },
-    reference: null,
   } as unknown as Message;
   await execute(message);
-  expect(mocks.record).toHaveBeenCalledWith(message);
-  expect(mocks.reply).toHaveBeenCalledWith(message, expect.any(Number));
+  expect(mocks.runChat).toHaveBeenCalledWith(message);
   vi.unstubAllEnvs();
 });
 
-it("records the bot's own messages but never responds to bot messages", async () => {
+it("passes the bot's own messages to the chain but ignores other bots", async () => {
   const { execute } = await import("../src/events/messageCreate.ts");
-  mocks.record.mockClear();
-  mocks.reply.mockClear();
+  mocks.runChat.mockClear();
   const own = {
     guildId: "guild",
     channelId: "channel",
@@ -35,9 +30,11 @@ it("records the bot's own messages but never responds to bot messages", async ()
     client: { user: { id: "bot" } },
     content: "Forex is trading currencies.",
   } as unknown as Message;
+  // Our own reply still enters the chain so it is recorded for context.
   await execute(own);
-  expect(mocks.record).toHaveBeenCalledExactlyOnceWith(own);
-  expect(mocks.reply).not.toHaveBeenCalled();
+  expect(mocks.runChat).toHaveBeenCalledExactlyOnceWith(own);
+
+  // Any other bot is dropped before the chain.
   await execute({ ...own, author: { id: "other", bot: true, username: "another bot" } } as Message);
-  expect(mocks.record).toHaveBeenCalledTimes(1);
+  expect(mocks.runChat).toHaveBeenCalledTimes(1);
 });
