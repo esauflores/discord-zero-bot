@@ -15,7 +15,7 @@ empty means all channels.
 channels → `record()` → if mentioned or replying to one of the bot's messages,
 fetch the last 50 messages plus the latest summary and answer in-channel using
 the AI SDK. Replies can call `search_memory` for channel history and `web_search`
-(Tavily; optional `SEARCH_API_KEY`) for external research. Ordinary conversation
+(Brave Search API; optional `BRAVE_API_KEY`) for external research. Ordinary conversation
 remains silent. `discord_id` is unique with `onConflictDoNothing`, so redelivered
 gateway events never create duplicates.
 
@@ -72,7 +72,7 @@ cp .env.example .env     # set DISCORD_TOKEN, DATABASE_URL, and AI_* values
 # optionally set CHANNEL_IDS to a comma-separated channel allowlist
 # empty CHANNEL_IDS means every channel
 # SUMMARY_INTERVAL_MINUTES controls internal summary cadence (default 60)
-# SEARCH_API_KEY enables Tavily web research in mention-triggered replies
+# BRAVE_API_KEY enables Brave web research in mention-triggered replies
 # AI_BASE_URL is the OpenAI-compatible endpoint, e.g. localhost:1234/v1
 # AI_API_KEY can be a placeholder for local servers that don't require one
 # AI_MODEL is the model identifier exposed by the server

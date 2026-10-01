@@ -57,20 +57,19 @@ export async function reply(message: Message): Promise<string> {
         description: "Search the web for external research.",
         inputSchema: querySchema,
         execute: async ({ query }) => {
-          const searchApiKey = process.env.SEARCH_API_KEY;
+          const searchApiKey = process.env.BRAVE_API_KEY;
           if (!searchApiKey) return "search unavailable";
           try {
-            const response = await fetch("https://api.tavily.com/search", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ api_key: searchApiKey, query, max_results: 5 }),
+            const params = new URLSearchParams({ q: query, count: "5" });
+            const response = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
+              headers: { "X-Subscription-Token": searchApiKey, Accept: "application/json" },
             });
             if (!response.ok) return "search unavailable";
             const result = (await response.json()) as {
-              results?: { title: string; url: string; content: string }[];
+              web?: { results?: { title: string; url: string; description: string }[] };
             };
             return (
-              result.results?.map((hit) => `${hit.title} — ${hit.url}\n${hit.content}`).join("\n\n") ||
+              result.web?.results?.map((hit) => `${hit.title} — ${hit.url}\n${hit.description}`).join("\n\n") ||
               "No web results."
             );
           } catch {
