@@ -1,5 +1,5 @@
 services:
-  postgres:
+  database:
     build: ./database
     environment:
       POSTGRES_DB: discord_bot
@@ -15,7 +15,7 @@ services:
     ports:
       - "5432:5432"
 
-  seaweedfs:
+  storage:
     build: ./storage
     volumes:
       - seaweedfs_data:/data
@@ -29,12 +29,12 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: >-
-        postgres://discord_bot:${POSTGRES_PASSWORD}@postgres:5432/discord_bot
-      SEAWEEDFS_ENDPOINT: http://seaweedfs:8333
+        postgres://discord_bot:${POSTGRES_PASSWORD}@database:5432/discord_bot
+      SEAWEEDFS_ENDPOINT: http://storage:8333
     depends_on:
-      postgres:
+      database:
         condition: service_healthy
-      seaweedfs:
+      storage:
         condition: service_started
     restart: unless-stopped
 

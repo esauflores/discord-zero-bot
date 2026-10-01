@@ -12,8 +12,10 @@
     "check": "oxlint && oxfmt --check && tsc -p database && tsc -p storage && tsc -p bot",
     "check:fix": "oxlint --fix && oxfmt --write",
     "test": "vitest run",
-    "db:up": "docker compose up -d",
-    "db:push": "bun --cwd database --env-file=../.env run db:push"
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "bot:local": "cd bot && bun --env-file=../.env run src/index.ts",
+    "db:push": "cd database && bun --env-file=../.env run db:push"
   },
   "devDependencies": {
     "bun-types": "^1.4.2",
