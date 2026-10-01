@@ -82,8 +82,16 @@ bun run db:push
 bun run src/index.ts
 ```
 
-Portal: create an app at developer.discord.com → Bot → token; OAuth2 scope
-`bot`; enable the **Message Content** intent.
+Portal: developer.discord.com → app → **Bot** → token + enable the **Message
+Content** intent (privileged — separate from the invite). **Installation** → Guild
+Install → scope `bot` is all that's needed (`applications.commands` ships with it
+by default; this bot has no commands). Minimal permissions: View Channels, Read
+Message History, Send Messages, Send Messages in Threads (+ Embed Links / Attach
+Files only if used). Invite URL shape:
+
+```text
+https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&scope=bot&permissions=274878024704
+```
 
 ## before real data flows (TODO)
 
