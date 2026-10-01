@@ -1,19 +1,43 @@
 services:
   postgres:
-    image: postgres:18-alpine
+    build: ./database
     environment:
       POSTGRES_DB: discord_bot
       POSTGRES_USER: discord_bot
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U discord_bot -d discord_bot"]
       interval: 5s
       timeout: 5s
       retries: 5
-    expose:
-      - "5432"
+    ports:
+      - "5432:5432"
+
+  seaweedfs:
+    build: ./storage
+    volumes:
+      - seaweedfs_data:/data
+    ports:
+      - "127.0.0.1:8333:8333"
+
+  bot:
+    build:
+      context: .
+      dockerfile: bot/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: >-
+        postgres://discord_bot:${POSTGRES_PASSWORD}@postgres:5432/discord_bot
+      SEAWEEDFS_ENDPOINT: http://seaweedfs:8333
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_started
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  seaweedfs_data:

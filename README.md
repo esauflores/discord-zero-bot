@@ -1,43 +1,92 @@
 # discord-zero-bot
 
 A conversational participant for my study Discord server. It records messages
-(channel memory) and only talks when mentioned or directly replied to. No slash
-commands and no unsolicited posts. Specific bot for my server — not a product.
+(channel memory) and processes every channel message, but only speaks when
+addressed (including Zero, Zerotillo, Zerotillo-bot, or Zero-bot). No slash
+commands. Specific bot for my server — not a product.
 
 ## how it works
 
-**boot** (`src/index.ts`): env → postgres (drizzle) → Discord client
-(intents: `Guilds` + `MessageContent`) → load events → gateway login. `CHANNEL_IDS`
+Bun workspaces: `database/` owns the Drizzle schema, Postgres connection, and
+query helpers; `storage/` owns the SeaweedFS container and object helpers; `bot/`
+uses both and translates Discord messages into records. Each workspace has
+its own `tsconfig.json`; root scripts and `docker-compose.yml` tie them together.
+
+Every package is reachable by its bare name and by subpath:
+
+| specifier                             | exports                                              |
+| ------------------------------------- | ---------------------------------------------------- |
+| `@discord-zero-bot/database`          | `db`, `closeDb`                                      |
+| `@discord-zero-bot/database/schema`   | the Drizzle tables                                   |
+| `@discord-zero-bot/database/client`   | `db`, `closeDb`                                      |
+| `@discord-zero-bot/database/messages` | `saveMessage`, `context`, `recent`, `messageColumns` |
+| `@discord-zero-bot/database/search`   | `searchMemory`                                       |
+| `@discord-zero-bot/storage`           | `bucket`, `upload`, `download`                       |
+| `@discord-zero-bot/bot`               | `client`, `reply` (no login on import)               |
+
+The bot's import route is `bot/src/app.ts`, not `bot/src/index.ts`, because the
+latter logs in to Discord as a side effect; runtime startup stays in `index.ts`.
+
+Runtime spike (2026-10) on bun 1.4.2: S1–S4 PASS — client, REST 401, gateway
+Hello/4004, clean self-exit. Node 24 behaves identically as a fallback. S5,
+network resume after a gateway drop, is still unverified: it needs a real bot
+token and tracks bun#2077.
+
+**boot** (`bot/src/index.ts`): env → postgres (drizzle) → Discord client
+(intents: `Guilds` + `GuildMessages` + `MessageContent`) → load events → gateway login. `CHANNEL_IDS`
 can restrict both recording and replies to a comma-separated set of channel IDs;
 empty means all channels.
 
-**every message** (`src/events/messageCreate.ts`): skip bots and disallowed
-channels → `record()` → if mentioned or replying to one of the bot's messages,
-fetch the last 50 messages plus the latest summary and answer in-channel using
-the AI SDK. Replies can call `search_memory` for channel history and `web_search`
-(Brave Search API; optional `BRAVE_API_KEY`) for external research. Ordinary conversation
-remains silent. `discord_id` is unique with `onConflictDoNothing`, so redelivered
-gateway events never create duplicates.
+**every message** (`bot/src/events/messageCreate.ts`): skip bots and disallowed
+channels → `record()` (including the bot's own replies) → classify the current
+message with Jev 1.13 using the previous 10 messages. Jev decides both whether
+it was addressed and whether a reply needs a smarter model. Direct mentions/replies
+always count as addressed, but still use Jev to select the model. Simple replies
+use `qwen/qwen3.7-flash`; complex replies use `deepseek/deepseek-v4.1-flash`.
+The selected model gets the latest 10 messages and can use `respond_in_discord` to speak. It can also call
+`read_chat` for related older history (including attachment names, types, and sizes), `open_attachment` to read a saved
+image, PDF, or text file (even one sent long ago), `react` to add one emoji when the message deserves it,
+`generate_image` to attach an image in
+the background, and `web_search` (Brave Search API; optional `BRAVE_API_KEY`)
+for external research. Logs show when evaluation starts, tools run, and whether
+the bot replied or stayed silent. Ordinary messages incur only the small
+classifier request, not a full chat-model call.
+`discord_id` is unique with `onConflictDoNothing`, so redelivered gateway
+events never create duplicates.
 
-**memory** (`src/db/messages.ts`, `src/db/summaries.ts`): raw messages remain the
-source of truth; short memory is recent messages, and summaries are derived
-large memory. Every `SUMMARY_INTERVAL_MINUTES` (default 60), the bot summarizes
-new messages in the configured channels (or all channels when `CHANNEL_IDS` is
-empty). Summaries are internal memory only and are never posted to Discord.
+**memory** (`database/src/messages.ts`): Postgres stores the message text/index
+fields plus a Discord-shaped JSON snapshot with attachment metadata and
+SeaweedFS object keys. Attachment bytes are copied from Discord's CDN to the
+private SeaweedFS S3 gateway before the row is inserted. If an upload fails,
+the message and attachment metadata are still saved with a null storage key
+(and the failure is logged). Existing rows have a null snapshot; edits and
+deletions are not synced yet. The bot reads the latest 10 messages and can
+search older messages on demand, including their saved attachment metadata.
+The unused `summaries` table is no longer in the schema; `bun run db:push` may
+remove existing summary rows, so back them up first if needed.
 
 ## stack (decided)
 
-| piece           | choice                                             | notes                                                                                                                                                                                      |
-| --------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| bot framework   | discord.js v14                                     | ecosystem default                                                                                                                                                                          |
-| runtime         | bun                                                | spike 2026-10: S1–S4 PASS on bun 1.4.2 (client, REST 401, gateway Hello/4004, clean self-exit) — node 24 identical as fallback. S5 (network-resume, tracked bun#2077) pending a real token |
-| storage         | postgres + drizzle-orm (postgres-js)               | `bun run db:push`; schema in `src/db/schema.ts`                                                                                                                                            |
-| AI layer (core) | Vercel AI SDK (`ai` + `@ai-sdk/openai-compatible`) | wired to OpenRouter (`openrouter.ai/api/v1`) — model `xiaomi/mimo-v2.6-flash`; endpoint-swappable (LM Studio / llama.cpp work too), no Ollama                                              |
-| tooling         | oxlint + oxfmt --check + tsc --noEmit, vitest      | `bun run check`                                                                                                                                                                            |
+| piece           | choice                                             | notes                                                                                          |
+| --------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| bot framework   | discord.js v14                                     | ecosystem default                                                                              |
+| runtime         | bun                                                | spike 2026-10: S1–S4 PASS on bun 1.4.2 — node 24 identical as fallback                         |
+| database        | postgres                                           | `bun run db:push`; snapshots defined in `database/src/schema.ts`                               |
+| storage         | SeaweedFS (private S3 gateway)                     | attachment bytes in the `seaweedfs_data` volume; upload/download in `storage/src/index.ts`     |
+| AI layer (core) | Vercel AI SDK (`ai` + `@ai-sdk/openai-compatible`) | OpenRouter: Jev routes simple replies to Qwen3.7 Flash, complex replies to DeepSeek V4.1 Flash |
+| tooling         | oxlint + oxfmt --check + tsc --noEmit, vitest      | `bun run check`                                                                                |
 
-AI endpoint configuration comes from `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL`.
-Use an OpenAI-compatible server such as LM Studio (`http://localhost:1234/v1`),
-llama.cpp `llama-server` (`http://localhost:8080/v1`), or another compatible API.
+`AI_API_KEY` is all the AI layer needs: OpenRouter is the only endpoint, and it is
+hardcoded in `bot/src/models.ts` because the Decisions API is exclusive to it. Model IDs
+live in the same folder. Address detection and model
+routing use its [Jev Decisions API](https://openrouter.ai/docs/guides/community/jev-tutorial)
+(`typesafe/jev-1.13`); local OpenAI-compatible servers do not offer this endpoint
+or the pinned models. On Jev failure, direct mentions/replies and name calls still
+work using DeepSeek, but contextual follow-ups cannot be detected. Image reactions
+use Qwen. Image generation uses OpenRouter's separate `/api/v1/images` endpoint
+with `krea/krea-2-medium-turbo`; ask the bot to generate an image and it may use
+`generate_image`. Generation is billed separately (Krea Turbo is listed from
+$0.015/image). See [Krea 2 Medium Turbo on OpenRouter](https://openrouter.ai/krea/krea-2-medium-turbo).
 
 ## retrieval ladder (deferred — only when channel memory needs more)
 
@@ -56,8 +105,8 @@ llama.cpp `llama-server` (`http://localhost:8080/v1`), or another compatible API
   unsolicited channel posts are the annoyance pattern
 - **silent archiving is rare and trust-costly** — notice/consent + retention are
   core constraints, not polish ([Developer Policy](https://discord.com/developers/docs/policies-and-agreements/developer-policy))
-- no standard memory stack exists: time-window digests → pgvector RAG with
-  maintained summaries; raw rows stay the source of truth
+- no standard memory stack exists; raw messages stay the source of truth until
+  retrieval needs prove otherwise
 - platform policy: app verification past 100 guilds; privileged-intent review at
   10k accessible users; Message Content intent is privileged and we need it
 - voice (parked): Polly ≈ $0.11/30 min, ElevenLabs from $6/mo; `@discordjs/voice`
@@ -68,18 +117,11 @@ llama.cpp `llama-server` (`http://localhost:8080/v1`), or another compatible API
 ## setup
 
 ```bash
-cp .env.example .env     # set DISCORD_TOKEN, DATABASE_URL, and AI_* values
-# optionally set CHANNEL_IDS to a comma-separated channel allowlist
-# empty CHANNEL_IDS means every channel
-# SUMMARY_INTERVAL_MINUTES controls internal summary cadence (default 60)
-# BRAVE_API_KEY enables Brave web research in mention-triggered replies
-# AI_BASE_URL is the OpenAI-compatible endpoint, e.g. localhost:1234/v1
-# AI_API_KEY can be a placeholder for local servers that don't require one
-# AI_MODEL is the model identifier exposed by the server
-docker compose up -d
+cp .env.example .env
+docker compose up -d postgres seaweedfs
 bun install
 bun run db:push
-bun run src/index.ts
+docker compose up -d --build bot
 ```
 
 Portal: developer.discord.com → app → **Bot** → token + enable the **Message
@@ -92,12 +134,6 @@ Files only if used). Invite URL shape:
 ```text
 https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&scope=bot&permissions=274878024704
 ```
-
-## before real data flows (TODO)
-
-- **notice/consent**: tell the server the bot takes notes
-- **retention + edit/delete handling**: upsert or version edits; purge or
-  tombstone deletions
 
 ## dev
 

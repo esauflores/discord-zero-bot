@@ -1,0 +1,15 @@
+{
+  "name": "@discord-zero-bot/bot",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/app.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.62",
+    "@discord-zero-bot/database": "workspace:*",
+    "@discord-zero-bot/storage": "workspace:*",
+    "ai": "^7.0.126",
+    "discord.js": "^14.19.3"
+  }
+}

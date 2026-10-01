@@ -4,21 +4,36 @@
   "workspaces": {
     "": {
       "name": "discord-bot",
-      "dependencies": {
-        "@ai-sdk/openai-compatible": "^3.0.62",
-        "ai": "^7.0.126",
-        "discord.js": "^14.19.3",
-        "drizzle-orm": "^0.44.7",
-        "postgres": "^3.4.7",
-      },
       "devDependencies": {
         "bun-types": "^1.4.2",
-        "drizzle-kit": "^0.31.5",
         "oxfmt": "^0.71.0",
         "oxlint": "^1.86.0",
         "typescript": "^7.0.2",
         "vitest": "^5.0.3",
       },
+    },
+    "bot": {
+      "name": "@discord-zero-bot/bot",
+      "dependencies": {
+        "@ai-sdk/openai-compatible": "^3.0.62",
+        "@discord-zero-bot/database": "workspace:*",
+        "@discord-zero-bot/storage": "workspace:*",
+        "ai": "^7.0.126",
+        "discord.js": "^14.19.3",
+      },
+    },
+    "database": {
+      "name": "@discord-zero-bot/database",
+      "dependencies": {
+        "drizzle-orm": "^0.44.7",
+        "postgres": "^3.4.7",
+      },
+      "devDependencies": {
+        "drizzle-kit": "^0.31.5",
+      },
+    },
+    "storage": {
+      "name": "@discord-zero-bot/storage",
     },
   },
   "packages": {
@@ -29,6 +44,12 @@
     "@ai-sdk/provider": ["@ai-sdk/provider@4.0.21", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-UpbC9C1oht8dhfKPbVXSLRZS3DI8uk8n5v2uMjBPNIYGsC2kL045ywq7D8Hh9KgnH9rP5W/GxQdYtWScRouqlA=="],
 
     "@ai-sdk/provider-utils": ["@ai-sdk/provider-utils@5.0.53", "", { "dependencies": { "@ai-sdk/provider": "4.0.21", "@standard-schema/spec": "^1.1.0", "@workflow/serde": "4.1.0", "eventsource-parser": "^3.0.8", "undici": "^7.29.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-VVe6UDd0y0/B4TfauuKKzcppqvhTmSluwwUVT4WG2/8h7gFbyFm7PM4UGM+ZXe3/RI6bv+Vl1cw/7aiBoQqdxg=="],
+
+    "@discord-zero-bot/bot": ["@discord-zero-bot/bot@workspace:bot"],
+
+    "@discord-zero-bot/database": ["@discord-zero-bot/database@workspace:database"],
+
+    "@discord-zero-bot/storage": ["@discord-zero-bot/storage@workspace:storage"],
 
     "@discordjs/builders": ["@discordjs/builders@1.14.1", "", { "dependencies": { "@discordjs/formatters": "^0.6.2", "@discordjs/util": "^1.2.0", "@sapphire/shapeshift": "^4.0.0", "discord-api-types": "^0.38.40", "fast-deep-equal": "^3.1.3", "ts-mixer": "^6.0.4", "tslib": "^2.6.3" } }, "sha512-gSKkhXLqs96TCzk66VZuHHl8z2bQMJFGwrXC0f33ngK+FLNau4hU1PYny3DNJfNdSH+gVMzE85/d5FQ2BpcNwQ=="],
 

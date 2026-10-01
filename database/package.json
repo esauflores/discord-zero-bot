@@ -1,0 +1,22 @@
+{
+  "name": "@discord-zero-bot/database",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./client": "./src/index.ts",
+    "./messages": "./src/messages.ts",
+    "./search": "./src/search.ts"
+  },
+  "scripts": {
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.7",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.5"
+  }
+}
