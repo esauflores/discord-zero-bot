@@ -1,19 +1,21 @@
 # zero-discord-bot
 
-Silent, per-channel note-taker for my study Discord server. It watches messages,
-records what people said (author + timestamp), and keeps context grouped by
-channel. No chat replies, no commands except `/ping` (smoke). Specific bot for my
-server — not a product.
+A conversational participant for my study Discord server. It records messages
+(channel memory) and only talks when mentioned or directly replied to. No slash
+commands and no unsolicited posts. Specific bot for my server — not a product.
 
 ## how it works
 
-**boot** (`src/index.ts`): env → postgres (drizzle) → client
-(intents: `Guilds` + `MessageContent`) → load events/commands → gateway login.
+**boot** (`src/index.ts`): env → postgres (drizzle) → Discord client
+(intents: `Guilds` + `MessageContent`) → load events → gateway login. `CHANNEL_IDS`
+can restrict both recording and replies to a comma-separated set of channel IDs;
+empty means all channels.
 
-**every message** (`src/events/messageCreate.ts`): skip bots → `record()` →
-one `messages` row (guild, channel, discord_id, author, content, created_at).
-`discord_id` is unique with `onConflictDoNothing`, so redelivered gateway events
-never create duplicates.
+**every message** (`src/events/messageCreate.ts`): skip bots and disallowed
+channels → `record()` → if mentioned or replying to one of the bot's messages,
+fetch the last 50 messages for that channel and answer in-channel using the AI
+SDK. Ordinary conversation remains silent. `discord_id` is unique with
+`onConflictDoNothing`, so redelivered gateway events never create duplicates.
 
 **memory is just queries** (`src/db/messages.ts`) — no merge job:
 
@@ -21,20 +23,21 @@ never create duplicates.
 - `recent(channel, 50)` — last messages
 - large memory = the same table without the time cutoff
 
-**`/ping`** is the only command — registered per-guild (`GUILD_ID`, instant) by
-`bun run deploy-commands`, or globally without it.
-
 ## stack (decided)
 
-| piece               | choice                                        | notes                                                                                                  |
-| ------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| bot framework       | discord.js v14                                | ecosystem default                                                                                      |
-| runtime             | bun                                           | gateway/voice have tracked bun issues — spike-test resume before trusting (bun#2077, discord.js#10840) |
-| storage             | postgres + drizzle-orm (postgres-js)          | `bun run db:push`; schema in `src/db/schema.ts`                                                        |
-| AI layer (deferred) | Vercel AI SDK (`ai` + `@ai-sdk/*`)            | provider-swappable; **no Ollama** (LM Studio / llama.cpp `llama-server` as local paths)                |
-| tooling             | oxlint + oxfmt --check + tsc --noEmit, vitest | `bun run check`                                                                                        |
+| piece           | choice                                             | notes                                                                                                  |
+| --------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| bot framework   | discord.js v14                                     | ecosystem default                                                                                      |
+| runtime         | bun                                                | gateway/voice have tracked bun issues — spike-test resume before trusting (bun#2077, discord.js#10840) |
+| storage         | postgres + drizzle-orm (postgres-js)               | `bun run db:push`; schema in `src/db/schema.ts`                                                        |
+| AI layer (core) | Vercel AI SDK (`ai` + `@ai-sdk/openai-compatible`) | OpenAI-compatible endpoint; no Ollama (LM Studio / llama.cpp `llama-server` work)                      |
+| tooling         | oxlint + oxfmt --check + tsc --noEmit, vitest      | `bun run check`                                                                                        |
 
-## retrieval ladder (deferred — only when `/ask` is real)
+AI endpoint configuration comes from `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL`.
+Use an OpenAI-compatible server such as LM Studio (`http://localhost:1234/v1`),
+llama.cpp `llama-server` (`http://localhost:8080/v1`), or another compatible API.
+
+## retrieval ladder (deferred — only when channel memory needs more)
 
 1. **postgres `tsvector` full-text search** — zero new infra, try first
    (opencode ships no RAG at all — grep + LSP + context stuffing)
@@ -63,16 +66,20 @@ never create duplicates.
 ## setup
 
 ```bash
-cp .env.example .env     # DISCORD_TOKEN, DATABASE_URL, GUILD_ID
+cp .env.example .env     # set DISCORD_TOKEN, DATABASE_URL, and AI_* values
+# optionally set CHANNEL_IDS to a comma-separated channel allowlist
+# empty CHANNEL_IDS means every channel
+# AI_BASE_URL is the OpenAI-compatible endpoint, e.g. localhost:1234/v1
+# AI_API_KEY can be a placeholder for local servers that don't require one
+# AI_MODEL is the model identifier exposed by the server
 docker compose up -d
 bun install
 bun run db:push
-bun run deploy-commands
 bun run src/index.ts
 ```
 
-Portal: create an app at developer.discord.com → Bot → token; OAuth2 scopes
-`bot` + `applications.commands`; enable the **Message Content** intent.
+Portal: create an app at developer.discord.com → Bot → token; OAuth2 scope
+`bot`; enable the **Message Content** intent.
 
 ## before real data flows (TODO)
 

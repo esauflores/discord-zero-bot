@@ -7,10 +7,11 @@
     "check:fix": "oxlint --fix && oxfmt --write",
     "test": "vitest run",
     "db:up": "docker compose up -d",
-    "db:push": "drizzle-kit push",
-    "deploy-commands": "bun run src/deploy-commands.ts"
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.62",
+    "ai": "^7.0.126",
     "discord.js": "^14.19.3",
     "drizzle-orm": "^0.44.7",
     "postgres": "^3.4.7"
