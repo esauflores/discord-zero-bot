@@ -18,6 +18,22 @@ it("allows one reply and one reaction, rejecting the extras", () => {
   ]);
 });
 
+it("unescapes JSON unicode a model leaks into its own reply text", () => {
+  const effects: Effect[] = [];
+  queueReply(effects, "¿Te convenci\\u00f3 el chucho? \\ud83d\\ude0b");
+  expect(effects).toEqual([{ kind: "reply", text: "¿Te convenció el chucho? 😋" }]);
+
+  const twice: Effect[] = [];
+  queueReply(twice, "convenci\\\\u00f3");
+  expect(twice).toEqual([{ kind: "reply", text: "convenció" }]);
+});
+
+it("leaves ordinary text, real backslashes, and non-escapes alone", () => {
+  const effects: Effect[] = [];
+  queueReply(effects, "ruta C:\\users\\nacho y el \\unicornio");
+  expect(effects).toEqual([{ kind: "reply", text: "ruta C:\\users\\nacho y el \\unicornio" }]);
+});
+
 it("ignores empty text and non-emoji reactions, and caps reply length", () => {
   const effects: Effect[] = [];
   expect(queueReply(effects, "   ")).toBe("Empty reply ignored.");

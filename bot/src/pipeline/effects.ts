@@ -6,12 +6,29 @@
 export type Effect = { kind: "reply"; text: string } | { kind: "react"; emoji: string };
 
 /**
+ * Undoes JSON unicode escaping a model sometimes emits into its own reply text, so
+ * Discord shows the accented character instead of a literal "\\u00f3". Two passes,
+ * because a model can escape an already-escaped string.
+ */
+function unescape(value: string): string {
+  let text = value;
+  for (let pass = 0; pass < 2 && text.includes("\\u"); pass += 1) {
+    try {
+      text = JSON.parse(`"${text.replaceAll('"', '\\"')}"`) as string;
+    } catch {
+      return text;
+    }
+  }
+  return text;
+}
+
+/**
  * Queues an effect, allowing at most one reply and one reaction per message.
  * Returns null when queued, or the reason it was rejected.
  */
 export function queueReply(effects: Effect[], text: string): string | null {
   if (effects.some((effect) => effect.kind === "reply")) return "Already responded to this message.";
-  const trimmed = text.trim();
+  const trimmed = unescape(text.trim());
   if (!trimmed) return "Empty reply ignored.";
   effects.push({ kind: "reply", text: trimmed.slice(0, 2000) });
   return null;
