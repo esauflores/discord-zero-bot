@@ -19,6 +19,7 @@ export async function execute(message: import("discord.js").Message): Promise<vo
   if (guildId && message.guildId !== guildId) return;
   if (allowedChannels.size > 0 && !allowedChannels.has(message.channelId)) return;
   // TODO: notice/consent model before real data flows (README: "before real data flows").
+  console.log(`[msg] #${message.channelId} ${message.author.username}: ${message.content.slice(0, 80)}`);
   await record(message);
 
   const mentioned = message.mentions.has(message.client.user);
@@ -28,5 +29,6 @@ export async function execute(message: import("discord.js").Message): Promise<vo
     if (referenced.author.id !== message.client.user.id) return;
   }
 
+  console.log(`[reply] -> ${message.author.username} in #${message.channelId}`);
   await message.reply(await reply(message));
 }
