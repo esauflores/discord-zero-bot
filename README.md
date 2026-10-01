@@ -22,7 +22,7 @@ Every package is reachable by its bare name and by subpath:
 | `@discord-zero-bot/database/messages` | `saveMessage`, `context`, `recent`, `messageColumns` |
 | `@discord-zero-bot/database/search`   | `searchMemory`                                       |
 | `@discord-zero-bot/storage`           | `bucket`, `upload`, `download`                       |
-| `@discord-zero-bot/bot`               | `client`, `reply` (no login on import)               |
+| `@discord-zero-bot/bot`               | `client`, `runChat` (no login on import)             |
 
 The bot's import route is `bot/src/app.ts`, not `bot/src/index.ts`, because the
 latter logs in to Discord as a side effect; runtime startup stays in `index.ts`.
@@ -32,27 +32,57 @@ Hello/4004, clean self-exit. Node 24 behaves identically as a fallback. S5,
 network resume after a gateway drop, is still unverified: it needs a real bot
 token and tracks bun#2077.
 
+`bot/src/` is four groups, so a change lands in one place:
+
+| group       | files                                                        | what belongs there                                                   |
+| ----------- | ------------------------------------------------------------ | -------------------------------------------------------------------- |
+| `pipeline/` | `context`, `effects`, `gate`, `enrich`, `respond`, `deliver` | the chain every message runs: one `Stage` per file                   |
+| `media/`    | `types`, `storage`, `audio`, `index`                         | turning an attachment into text, plus Discord→SeaweedFS storage      |
+| `tasks/`    | `index`                                                      | background work that outlives the message that started it            |
+| `tools/`    | six capabilities                                             | what the model can call; they record effects, never write to Discord |
+
+Adding a capability is a `Stage` appended to `chatStages` in `pipeline/index.ts`.
+Adding a media type (image captions, say) is a `Processor` appended to `processors`
+in `media/index.ts`. `pipeline/deliver.ts` is the only code that writes replies and
+reactions to Discord, which is why `tools/` are plain data to assert on: they push
+`Effect` values (`pipeline/effects.ts`) that `deliver` executes, allowing at most one
+reply and one reaction per message.
+
 **boot** (`bot/src/index.ts`): env → postgres (drizzle) → Discord client
 (intents: `Guilds` + `GuildMessages` + `MessageContent`) → load events → gateway login. `CHANNEL_IDS`
 can restrict both recording and replies to a comma-separated set of channel IDs;
 empty means all channels.
 
 **every message** (`bot/src/events/messageCreate.ts`): skip bots and disallowed
-channels → `record()` (including the bot's own replies) → classify the current
-message with Jev 1.13 using the previous 10 messages. Jev decides both whether
+channels → `record()` (including the bot's own replies) → `runChat()` through the chain above.
+`gate` classifies the current message with Jev 1.13 using the previous 10 messages. Jev decides both whether
 it was addressed and whether a reply needs a smarter model. Direct mentions/replies
 always count as addressed, but still use Jev to select the model. Simple replies
 use `qwen/qwen3.7-flash`; complex replies use `deepseek/deepseek-v4.1-flash`.
-The selected model gets the latest 10 messages and can use `respond_in_discord` to speak. It can also call
-`read_chat` for related older history (including attachment names, types, and sizes), `open_attachment` to read a saved
-image, PDF, or text file (even one sent long ago), `react` to add one emoji when the message deserves it,
-`generate_image` to attach an image in
-the background, and `web_search` (Brave Search API; optional `BRAVE_API_KEY`)
-for external research. Logs show when evaluation starts, tools run, and whether
-the bot replied or stayed silent. Ordinary messages incur only the small
+`enrich` gives the selected model the latest 10 messages, any file it can read
+directly, and note of background work already running in the channel.
+The model can call `respond_in_discord` to speak, `read_chat` for related older history
+(including attachment names, types, and sizes), `open_attachment` to read a saved
+image, PDF, or text file (even one sent long ago), `react` to add one emoji,
+`generate_image` to attach an image in the background, and `web_search`
+(Brave Search API; optional `BRAVE_API_KEY`) for external research. If the model answers
+with plain text instead of calling `respond_in_discord`, `deliver` still publishes
+that text (logged as `text (fallback)`) rather than dropping a real reply.
+Logs show when evaluation starts, tools run, and whether
+the bot replied or stayed silent, plus a per-stage timing line
+(`gate=…ms enrich=…ms respond=…ms deliver=…ms total=…ms steps=N`).
+Ordinary messages incur only the small
 classifier request, not a full chat-model call.
 `discord_id` is unique with `onConflictDoNothing`, so redelivered gateway
 events never create duplicates.
+
+**media** (`bot/src/media/`): an attachment is downloaded once, stored in SeaweedFS,
+then offered to every registered `Processor`. Audio is transcribed
+(`whisper-large-v3-turbo`) and the transcript is merged into the message `content`,
+so search and the models both see it with no special handling; the original bytes
+stay reachable through `storage_key`. Only `audio/*` is handled today — adding image
+captions means one processor file and one array entry. A processor that fails is
+logged and skipped, so one capability cannot break archiving.
 
 **memory** (`database/src/messages.ts`): Postgres stores the message text/index
 fields plus a Discord-shaped JSON snapshot with attachment metadata and

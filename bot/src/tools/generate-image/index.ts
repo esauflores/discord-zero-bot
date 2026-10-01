@@ -1,6 +1,7 @@
 import { jsonSchema, tool } from "ai";
 import type { Message } from "discord.js";
 
+import { pendingTasks, startTask } from "../../tasks/index.ts";
 import { generateImage } from "./imageGeneration.ts";
 
 export function generateImageTool(message: Message, state: { imageRequested: boolean }) {
@@ -15,16 +16,21 @@ export function generateImageTool(message: Message, state: { imageRequested: boo
     execute: async ({ prompt }) => {
       if (state.imageRequested) return "Image already requested for this message.";
       if (!prompt.trim()) return "Image prompt is empty.";
+      const [busy] = pendingTasks(message.channelId);
+      if (busy)
+        return `${busy.task.name} is already running in this channel ("${busy.task.detail}", ${Math.round(busy.ageMs / 1000)}s ago). Do not start another; tell the user it is on the way.`;
       state.imageRequested = true;
       console.log(`[tool] #${message.channelId} message ${message.id} generate_image started`);
-      // ponytail: in-process background job; use a durable queue if restart safety matters.
-      void generateImage(prompt)
-        .then((image) => message.reply({ files: [{ attachment: image, name: "generated.png" }] }))
-        .then(() => console.log(`[sent] #${message.channelId} message ${message.id} image`))
-        .catch((error: unknown) => {
+      startTask(message.channelId, { name: "generate_image", detail: prompt }, async () => {
+        try {
+          const image = await generateImage(prompt);
+          await message.reply({ files: [{ attachment: image, name: "generated.png" }] });
+          console.log(`[sent] #${message.channelId} message ${message.id} image`);
+        } catch (error) {
           console.error(`[image] #${message.channelId} message ${message.id}`, error);
-          return message.reply("No pude generar la imagen.").catch(console.error);
-        });
+          await message.reply("No pude generar la imagen.").catch(console.error);
+        }
+      });
       return "Image generation started; you may answer in text while it runs.";
     },
   });

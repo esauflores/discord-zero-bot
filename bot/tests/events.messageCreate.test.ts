@@ -3,7 +3,7 @@ import { expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ record: vi.fn(), reply: vi.fn() }));
 vi.mock("../src/archive/record.ts", () => ({ record: mocks.record }));
-vi.mock("../src/reply.ts", () => ({ reply: mocks.reply }));
+vi.mock("../src/pipeline/index.ts", () => ({ runChat: mocks.reply }));
 
 it("lets the model decide whether to respond to an ordinary channel message", async () => {
   vi.stubEnv("GUILD_ID", "");
@@ -20,7 +20,7 @@ it("lets the model decide whether to respond to an ordinary channel message", as
   } as unknown as Message;
   await execute(message);
   expect(mocks.record).toHaveBeenCalledWith(message);
-  expect(mocks.reply).toHaveBeenCalledWith(message);
+  expect(mocks.reply).toHaveBeenCalledWith(message, expect.any(Number));
   vi.unstubAllEnvs();
 });
 

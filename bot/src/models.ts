@@ -5,6 +5,7 @@ const apiUrl = "https://openrouter.ai/api/v1";
 export const jevEndpoint = "https://openrouter.ai/api/alpha/decisions";
 export const imageEndpoint = `${apiUrl}/images/generations`;
 export const chatEndpoint = apiUrl;
+export const transcriptionEndpoint = `${apiUrl}/audio/transcriptions`;
 
 // The Decisions API is text/JSON only (no vision).
 export const jevModel = "typesafe/jev-1.13";
@@ -15,3 +16,8 @@ export const cheapModel = "qwen/qwen3.7-flash";
 export const smartModel = "deepseek/deepseek-v4.1-flash";
 
 export const imageModel = "krea/krea-2-medium-turbo";
+
+// Voice notes are Spanish (often code-switched). Large-v3-turbo is the cheapest
+// model that transcribed our test audio accurately; the non-distilled large-v3 is
+// slightly better on very quiet clips for 3x the cost ($0.00003/call either way).
+export const transcriptionModel = "openai/whisper-large-v3-turbo";

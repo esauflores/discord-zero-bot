@@ -1,2 +1,2 @@
 export { client } from "./client.ts";
-export { reply } from "./reply.ts";
+export { runChat } from "./pipeline/index.ts";

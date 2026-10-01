@@ -1,7 +1,10 @@
 import { jsonSchema, tool } from "ai";
-import type { Message } from "discord.js";
 
-export function reactToMessage(message: Message, state: { reacted: boolean }) {
+import { queueReaction } from "../../pipeline/effects.ts";
+import type { Effect } from "../../pipeline/effects.ts";
+
+/** Records a reaction instead of adding it; the deliver stage performs the write. */
+export function reactToMessage(effects: Effect[]) {
   return tool({
     description:
       "Add one emoji reaction to the current message. Use only when a reaction is clearly warranted; otherwise do nothing.",
@@ -11,19 +14,6 @@ export function reactToMessage(message: Message, state: { reacted: boolean }) {
       required: ["emoji"],
       additionalProperties: false,
     }),
-    execute: async ({ emoji }) => {
-      const reaction = emoji.trim();
-      if (state.reacted) return "Already reacted to this message.";
-      if (!reaction || [...reaction].length > 2) return "Reaction ignored.";
-      try {
-        await message.react(reaction);
-      } catch (error) {
-        console.error(`[react] #${message.channelId} message ${message.id}`, error);
-        return "Reaction not allowed.";
-      }
-      state.reacted = true;
-      console.log(`[react] #${message.channelId} message ${message.id} ${reaction}`);
-      return "Reaction added.";
-    },
+    execute: async ({ emoji }) => queueReaction(effects, emoji) ?? "Reaction queued; it will be added.",
   });
 }

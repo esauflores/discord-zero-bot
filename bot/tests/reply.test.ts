@@ -30,7 +30,7 @@ beforeAll(() => {
 });
 
 it("reads related history and starts image generation without blocking a text reply", async () => {
-  const { reply } = await import("../src/reply.ts");
+  const { runChat: reply } = await import("../src/pipeline/index.ts");
   const sent = vi.fn();
   const message = {
     channelId: "channel",
@@ -91,7 +91,7 @@ it("reads related history and starts image generation without blocking a text re
 });
 
 it("does not call the answer model when Jev says the bot was not addressed", async () => {
-  const { reply } = await import("../src/reply.ts");
+  const { runChat: reply } = await import("../src/pipeline/index.ts");
   mocks.recent.mockResolvedValue([
     { discord_id: "current", author_name: "user", content: "hello" },
     { discord_id: "prior", author_name: "friend", content: "hi" },
@@ -105,8 +105,8 @@ it("does not call the answer model when Jev says the bot was not addressed", asy
   expect(mocks.generate).not.toHaveBeenCalled();
 });
 
-it("only speaks when the model calls respond_in_discord", async () => {
-  const { reply } = await import("../src/reply.ts");
+it("publishes the model's text when it never calls respond_in_discord", async () => {
+  const { runChat: reply } = await import("../src/pipeline/index.ts");
   const sent = vi.fn();
   const message = {
     channelId: "channel",
@@ -118,13 +118,17 @@ it("only speaks when the model calls respond_in_discord", async () => {
     reply: sent,
   } as unknown as Message;
   mocks.recent.mockResolvedValue([]);
-  mocks.generate.mockResolvedValueOnce({ text: "silent internal reasoning" });
+  // Jev already decided the message is addressed, so text answered without the
+  // tool must still be published instead of silently dropped.
+  mocks.generate.mockResolvedValueOnce({ text: "qué ondas maje", steps: [] });
   await reply(message);
-  expect(sent).not.toHaveBeenCalled();
+  expect(sent).toHaveBeenCalledOnce();
+  expect(sent).toHaveBeenCalledWith("qué ondas maje");
 
+  sent.mockClear();
   mocks.generate.mockImplementationOnce(async ({ tools }) => {
     await tools.respond_in_discord.execute({ text: "hi" });
-    return { text: "not posted" };
+    return { text: "not posted", steps: [] };
   });
   await reply(message);
   expect(sent).toHaveBeenCalledOnce();
@@ -132,7 +136,7 @@ it("only speaks when the model calls respond_in_discord", async () => {
 });
 
 it("lets the model react to the current message", async () => {
-  const { reply } = await import("../src/reply.ts");
+  const { runChat: reply } = await import("../src/pipeline/index.ts");
   mocks.classify.mockResolvedValueOnce({ addressed: true, model: "qwen/qwen3.7-flash" });
   mocks.recent.mockResolvedValue([]);
   const reacted: string[] = [];
@@ -154,7 +158,7 @@ it("lets the model react to the current message", async () => {
 });
 
 it("hands a stored attachment back to the smart model", async () => {
-  const { reply } = await import("../src/reply.ts");
+  const { runChat: reply } = await import("../src/pipeline/index.ts");
   mocks.classify.mockResolvedValueOnce({ addressed: true, model: "deepseek/deepseek-v4.1-flash" });
   mocks.recent.mockResolvedValue([
     {

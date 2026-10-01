@@ -3,21 +3,11 @@ import type { Attachment, Message } from "discord.js";
 
 export { bucket };
 
-export type StoredAttachment = {
-  id: string;
-  filename: string;
-  content_type: string | null;
-  size: number;
-  storage_key: string | null;
-};
-
-/** Attachments saved in a message's Discord snapshot. */
-export function storedAttachments(snapshot: unknown): StoredAttachment[] {
-  const attachments = (snapshot as { attachments?: StoredAttachment[] } | null)?.attachments;
-  return Array.isArray(attachments) ? attachments : [];
-}
-
-export async function archiveAttachment(message: Message, attachment: Attachment): Promise<string> {
+/** Downloads an attachment from Discord, then stores it in SeaweedFS. */
+export async function archiveAttachment(
+  message: Message,
+  attachment: Attachment,
+): Promise<{ key: string; bytes: ArrayBuffer }> {
   const key = `${message.guildId}/${message.channelId}/${message.id}/${attachment.id}`;
   let url: URL;
   try {
@@ -30,6 +20,7 @@ export async function archiveAttachment(message: Message, attachment: Attachment
   }
   const download = await fetch(url, { redirect: "error" });
   if (!download.ok) throw new Error(`Discord attachment download failed: ${download.status}`);
-  await upload(key, await download.arrayBuffer(), attachment.contentType ?? "application/octet-stream");
-  return key;
+  const bytes = await download.arrayBuffer();
+  await upload(key, bytes, attachment.contentType ?? "application/octet-stream");
+  return { key, bytes };
 }

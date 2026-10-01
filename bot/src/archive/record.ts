@@ -1,7 +1,8 @@
 import { saveMessage } from "@discord-zero-bot/database/messages";
 import type { Message } from "discord.js";
 
-import { archiveAttachment, bucket } from "./attachments.ts";
+import { processMedia } from "../media/index.ts";
+import { archiveAttachment, bucket } from "../media/storage.ts";
 
 export async function record(msg: Message): Promise<void> {
   if (!msg.guild) return;
@@ -9,11 +10,23 @@ export async function record(msg: Message): Promise<void> {
   const attachments = await Promise.all(
     [...msg.attachments.values()].map(async (attachment) => {
       let storageKey: string | null = null;
+      let bytes: ArrayBuffer | null = null;
       try {
-        storageKey = await archiveAttachment(msg, attachment);
+        const archived = await archiveAttachment(msg, attachment);
+        storageKey = archived.key;
+        bytes = archived.bytes;
       } catch (error) {
         console.error(`[attachment] ${msg.id}/${attachment.id} upload failed`, error);
       }
+      // Media processors turn audio (and later images) into text, which lands in
+      // `content` so search and the models get it without special handling.
+      const text = bytes
+        ? await processMedia({
+            name: attachment.name,
+            contentType: attachment.contentType,
+            bytes,
+          })
+        : null;
       return {
         id: attachment.id,
         filename: attachment.name,
@@ -26,9 +39,18 @@ export async function record(msg: Message): Promise<void> {
         description: attachment.description,
         storage_bucket: storageKey ? bucket : null,
         storage_key: storageKey,
+        transcript: text,
       };
     }),
   );
+
+  // Keep the spoken text in `content`: search, and the context sent to the models,
+  // both read that column. The original audio stays reachable by storage_key.
+  const processed = attachments
+    .map((attachment) => attachment.transcript)
+    .filter(Boolean)
+    .join("\n");
+  const content = [msg.content, processed].filter(Boolean).join("\n");
 
   await saveMessage({
     guild_id: msg.guild.id,
@@ -36,7 +58,7 @@ export async function record(msg: Message): Promise<void> {
     discord_id: msg.id,
     author_id: msg.author.id,
     author_name: msg.author.username,
-    content: msg.content,
+    content,
     discord_message: {
       id: msg.id,
       guild_id: msg.guild.id,

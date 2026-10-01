@@ -1,7 +1,10 @@
 import { jsonSchema, tool } from "ai";
-import type { Message } from "discord.js";
 
-export function respondInDiscord(message: Message, state: { responded: boolean }) {
+import { queueReply } from "../../pipeline/effects.ts";
+import type { Effect } from "../../pipeline/effects.ts";
+
+/** Records a reply instead of sending it; the deliver stage performs the write. */
+export function respondInDiscord(effects: Effect[]) {
   return tool({
     description: "Reply to this Discord message. Call only when you want to speak; otherwise stay silent.",
     inputSchema: jsonSchema<{ text: string }>({
@@ -10,13 +13,6 @@ export function respondInDiscord(message: Message, state: { responded: boolean }
       required: ["text"],
       additionalProperties: false,
     }),
-    execute: async ({ text }) => {
-      if (state.responded) return "Already responded to this message.";
-      if (!text.trim()) return "Empty reply ignored.";
-      await message.reply(text.trim().slice(0, 2000));
-      state.responded = true;
-      console.log(`[sent] #${message.channelId} message ${message.id} text`);
-      return "Reply sent.";
-    },
+    execute: async ({ text }) => queueReply(effects, text) ?? "Reply queued; it will be sent.",
   });
 }

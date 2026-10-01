@@ -1,5 +1,5 @@
 import { record } from "../archive/record.ts";
-import { reply } from "../reply.ts";
+import { runChat } from "../pipeline/index.ts";
 
 const guildId = process.env.GUILD_ID ?? "";
 const allowedChannels = new Set(
@@ -10,6 +10,7 @@ const allowedChannels = new Set(
 );
 
 export async function execute(message: import("discord.js").Message): Promise<void> {
+  const receivedAt = Date.now();
   // personal bot: scope to one guild (GUILD_ID) + optional channel allowlist
   if (guildId && message.guildId !== guildId) {
     console.log(`[skip] guild ${message.guildId} != configured ${guildId}`);
@@ -27,5 +28,6 @@ export async function execute(message: import("discord.js").Message): Promise<vo
   // TODO: notice/consent model before real data flows (README: "before real data flows").
   console.log(`[msg] #${message.channelId} ${message.author.username}: ${message.content.slice(0, 80)}`);
   await record(message);
-  await reply(message);
+  console.log(`[timing] #${message.channelId} message ${message.id} record=${Date.now() - receivedAt}ms`);
+  await runChat(message, receivedAt);
 }
