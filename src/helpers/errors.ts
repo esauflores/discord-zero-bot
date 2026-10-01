@@ -1,7 +1,7 @@
 // error plumbing
 
 export function die(msg: string): never {
-  console.error(`zero-discord-bot: ${msg}`);
+  console.error(`discord-zero-bot: ${msg}`);
   process.exit(1);
 }
 

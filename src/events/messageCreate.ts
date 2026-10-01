@@ -3,6 +3,7 @@ import { Events } from "discord.js";
 import { record } from "../db/messages.ts";
 import { reply } from "../reply.ts";
 
+const guildId = process.env.GUILD_ID ?? "";
 const allowedChannels = new Set(
   (process.env.CHANNEL_IDS ?? "")
     .split(",")
@@ -13,8 +14,11 @@ const allowedChannels = new Set(
 export const name = Events.MessageCreate;
 
 export async function execute(message: import("discord.js").Message): Promise<void> {
-  if (message.author.bot || (allowedChannels.size > 0 && !allowedChannels.has(message.channelId))) return;
-  // TODO: establish the notice/consent model before real data flows (NOTES.md, next steps 6).
+  // personal bot: scope to one guild (GUILD_ID) + optional channel allowlist
+  if (message.author.bot) return;
+  if (guildId && message.guildId !== guildId) return;
+  if (allowedChannels.size > 0 && !allowedChannels.has(message.channelId)) return;
+  // TODO: notice/consent model before real data flows (README: "before real data flows").
   await record(message);
 
   const mentioned = message.mentions.has(message.client.user);

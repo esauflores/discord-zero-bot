@@ -1,4 +1,4 @@
-# zero-discord-bot
+# discord-zero-bot
 
 A conversational participant for my study Discord server. It records messages
 (channel memory) and only talks when mentioned or directly replied to. No slash
