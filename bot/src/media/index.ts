@@ -16,7 +16,9 @@ export async function processMedia(media: MediaInput): Promise<string | null> {
     try {
       const { text } = await processor.process(media);
       if (text) parts.push(text);
-      console.log(`[media] ${media.name} ${processor.name} ${Date.now() - started}ms`);
+      console.log(
+        `[media] ${media.name} ${processor.name} ${Date.now() - started}ms${text ? ` result=${JSON.stringify(text)}` : ""}`,
+      );
     } catch (error) {
       console.error(`[media] ${media.name} ${processor.name} failed`, error);
     }

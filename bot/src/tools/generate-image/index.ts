@@ -1,7 +1,8 @@
 import { jsonSchema, tool } from "ai";
 import type { Message } from "discord.js";
 
-import { pendingTasks, startTask } from "../../tasks/index.ts";
+import { pendingTasks, startTask } from "@/tasks/index.ts";
+
 import { generateImage } from "./imageGeneration.ts";
 
 export function generateImageTool(message: Message, state: { imageRequested: boolean }) {

@@ -1,6 +1,7 @@
 import { recent } from "@discord-zero-bot/database/messages";
 
-import { classifyMessage } from "../ai/classify.ts";
+import { classifyMessage } from "@/ai/classify.ts";
+
 import type { Stage } from "./context.ts";
 
 /** Loads the channel history, then lets Jev decide whether to answer and with which model. */
@@ -20,7 +21,16 @@ export const gate: Stage = async (ctx) => {
     .reverse();
 
   const classified = Date.now();
-  const { addressed, model } = await classifyMessage(ctx.message, previous);
+  const transcription = [...ctx.message.attachments.values()]
+    .map((attachment) => attachment.description)
+    .filter(Boolean)
+    .join("\n");
+  const classifiedMessage = transcription
+    ? Object.assign(Object.create(Object.getPrototypeOf(ctx.message)), ctx.message, {
+        content: [ctx.message.content, transcription].filter(Boolean).join("\n"),
+      })
+    : ctx.message;
+  const { addressed, model } = await classifyMessage(classifiedMessage, previous);
   ctx.timings.jev = Date.now() - classified;
   ctx.addressed = addressed;
   ctx.model = model;

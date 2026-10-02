@@ -1,4 +1,5 @@
-import { pendingTasks } from "../tasks/index.ts";
+import { pendingTasks } from "@/tasks/index.ts";
+
 import type { Stage } from "./context.ts";
 
 /**

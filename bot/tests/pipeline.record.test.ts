@@ -6,8 +6,8 @@ vi.mock("@discord-zero-bot/database/messages", () => ({ saveMessage: mocks.value
 // `process` calls the module-local `transcribe`, so the mock replaces the
 // processor itself. It reuses the real `audioFormat` rather than restating it,
 // so the format mapping is exercised instead of duplicated.
-vi.mock("../src/media/audio.ts", async () => {
-  const { audioFormat } = await import("../src/media/types.ts");
+vi.mock("@/media/audio.ts", async () => {
+  const { audioFormat } = await import("@/media/types.ts");
   return {
     transcribe: mocks.transcribe,
     audioProcessor: {
@@ -27,7 +27,7 @@ it("archives attachments and keeps message metadata if an upload fails", async (
     .mockResolvedValueOnce(new Response(null, { status: 200 })) // bucket
     .mockResolvedValueOnce(new Response(null, { status: 200 })); // object
   vi.stubGlobal("fetch", fetchMock);
-  const { record } = await import("../src/pipeline/record.ts");
+  const { record } = await import("@/pipeline/record.ts");
   const msg = {
     id: "message",
     guildId: "guild",
@@ -99,7 +99,7 @@ it("transcribes a voice note into the message content using the on-disk format",
     .mockResolvedValueOnce(new Response(null, { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
   mocks.transcribe.mockResolvedValue("hola maje, ya llegué");
-  const { record } = await import("../src/pipeline/record.ts");
+  const { record } = await import("@/pipeline/record.ts");
   const msg = {
     id: "message",
     guildId: "guild",

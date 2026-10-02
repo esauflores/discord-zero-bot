@@ -1,4 +1,4 @@
-import { runChat } from "../pipeline/index.ts";
+import { runChat } from "@/pipeline/index.ts";
 
 const guildId = process.env.GUILD_ID ?? "";
 const allowedChannels = new Set(

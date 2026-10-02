@@ -11,7 +11,7 @@
     "start": "bun run bot/src/index.ts",
     "check": "oxlint && oxfmt --check && tsc -p database && tsc -p storage && tsc -p bot",
     "check:fix": "oxlint --fix && oxfmt --write",
-    "test": "vitest run",
+    "test": "vitest run --config bot/vitest.config.ts",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "bot:local": "cd bot && bun --env-file=../.env run src/index.ts",

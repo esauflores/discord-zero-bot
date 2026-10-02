@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { queueReaction, queueReply, type Effect } from "../src/pipeline/effects.ts";
+import { queueReaction, queueReply, type Effect } from "@/pipeline/effects.ts";
 
 it("allows one reply and one reaction, rejecting the extras", () => {
   const effects: Effect[] = [];

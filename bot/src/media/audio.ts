@@ -1,4 +1,5 @@
-import { transcriptionEndpoint, transcriptionModel } from "../ai/models.ts";
+import { transcriptionEndpoint, transcriptionModel } from "@/ai/models.ts";
+
 import { audioFormat, type Processor } from "./types.ts";
 
 const apiKey = process.env.AI_API_KEY;

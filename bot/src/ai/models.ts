@@ -12,10 +12,10 @@ export const jevModel = "typesafe/jev-1.13";
 
 // Both accept text and images, so image messages and `open_attachment` results
 // can go straight to them without a separate vision model.
-export const cheapModel = "qwen/qwen3.7-flash";
+export const cheapModel = "deepseek/deepseek-v4.1-flash";
 export const smartModel = "deepseek/deepseek-v4.1-flash";
 
-export const imageModel = "krea/krea-2-medium-turbo";
+export const imageModel = "meta/muse-image";
 
 // Voice notes are Spanish (often code-switched). Large-v3-turbo is the cheapest
 // model that transcribed our test audio accurately; the non-distilled large-v3 is

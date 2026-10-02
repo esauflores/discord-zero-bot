@@ -3,7 +3,7 @@ import { download } from "@discord-zero-bot/storage";
 import { jsonSchema, tool } from "ai";
 import type { Message } from "discord.js";
 
-import { storedAttachments } from "../../media/index.ts";
+import { storedAttachments } from "@/media/index.ts";
 
 const openable = /^(image\/|video\/|application\/pdf$|text\/)/;
 

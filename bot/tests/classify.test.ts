@@ -1,7 +1,7 @@
 import type { Message } from "discord.js";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { classifyMessage } from "../src/ai/classify.ts";
+import { classifyMessage } from "@/ai/classify.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -30,10 +30,12 @@ it("sends the previous 10 messages to Jev's decisions endpoint and gates by its 
     author_name: i === 9 ? "zero-bot" : "friend",
     content: i === 9 ? "Forex is trading currencies." : `line ${i}`,
   }));
-  expect(await classifyMessage(message, previous)).toEqual({ addressed: true, model: "qwen/qwen3.7-flash" });
+  expect(await classifyMessage(message, previous)).toEqual({ addressed: true, model: "deepseek/deepseek-v4.1-flash" });
   expect(log).toHaveBeenCalledWith("[jev] #channel message current starting model=typesafe/jev-1.13 previous=10");
   expect(log).toHaveBeenCalledWith(
-    expect.stringMatching(/answered addressed=0\.90 smart=0\.20 respond=true model=qwen\/qwen3\.7-flash ms=\d+/),
+    expect.stringMatching(
+      /answered addressed=0\.90 smart=0\.20 respond=true model=deepseek\/deepseek-v4\.1-flash ms=\d+/,
+    ),
   );
   const [url, options] = fetcher.mock.calls[0];
   expect(url.toString()).toBe("https://openrouter.ai/api/alpha/decisions");

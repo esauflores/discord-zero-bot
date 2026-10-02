@@ -1,7 +1,7 @@
 import { jsonSchema, tool } from "ai";
 
-import { queueReply } from "../../pipeline/effects.ts";
-import type { Effect } from "../../pipeline/effects.ts";
+import { queueReply } from "@/pipeline/effects.ts";
+import type { Effect } from "@/pipeline/effects.ts";
 
 /** Records a reply instead of sending it; the deliver stage performs the write. */
 export function respondInDiscord(effects: Effect[]) {

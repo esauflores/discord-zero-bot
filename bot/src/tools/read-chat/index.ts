@@ -3,7 +3,7 @@ import { searchMemory } from "@discord-zero-bot/database/search";
 import { jsonSchema, tool } from "ai";
 import type { Message } from "discord.js";
 
-import { storedAttachments } from "../../media/index.ts";
+import { storedAttachments } from "@/media/index.ts";
 
 // Structural, not the exact row shape: `searchMemory` selects a subset and older
 // rows have no snapshot, so only presence of the snapshot is required.

@@ -1,8 +1,8 @@
 import { saveMessage } from "@discord-zero-bot/database/messages";
 import type { Message } from "discord.js";
 
-import { processMedia } from "../media/index.ts";
-import { archiveAttachment, bucket } from "../media/storage.ts";
+import { processMedia } from "@/media/index.ts";
+import { archiveAttachment, bucket } from "@/media/storage.ts";
 
 export async function record(msg: Message): Promise<void> {
   if (!msg.guild) return;

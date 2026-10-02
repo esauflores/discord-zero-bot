@@ -1,7 +1,7 @@
 import { jsonSchema, tool } from "ai";
 
-import { queueReaction } from "../../pipeline/effects.ts";
-import type { Effect } from "../../pipeline/effects.ts";
+import { queueReaction } from "@/pipeline/effects.ts";
+import type { Effect } from "@/pipeline/effects.ts";
 
 /** Records a reaction instead of adding it; the deliver stage performs the write. */
 export function reactToMessage(effects: Effect[]) {

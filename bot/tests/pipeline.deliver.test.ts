@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 
-import type { ChatContext } from "../src/pipeline/context.ts";
-import { deliver } from "../src/pipeline/deliver.ts";
+import type { ChatContext } from "@/pipeline/context.ts";
+import { deliver } from "@/pipeline/deliver.ts";
 
 function makeContext(overrides: Partial<ChatContext> = {}): {
   ctx: ChatContext;
