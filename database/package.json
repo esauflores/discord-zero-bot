@@ -3,14 +3,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./schema": "./src/schema.ts",
-    "./client": "./src/index.ts",
-    "./messages": "./src/messages.ts",
-    "./search": "./src/search.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
-    "db:push": "drizzle-kit push"
+    "push": "drizzle-kit push"
   },
   "dependencies": {
     "drizzle-orm": "^0.44.7",

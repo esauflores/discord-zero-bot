@@ -1,4 +1,4 @@
-import type { MessageRow } from "@discord-zero-bot/database/messages";
+import type { MessageRow } from "@discord-zero-bot/database";
 import type { Message } from "discord.js";
 
 import type { Effect } from "./effects.ts";

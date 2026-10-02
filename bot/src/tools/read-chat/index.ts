@@ -1,5 +1,4 @@
-import { recent } from "@discord-zero-bot/database/messages";
-import { searchMemory } from "@discord-zero-bot/database/search";
+import { recent, searchMemory } from "@discord-zero-bot/database";
 import { jsonSchema, tool } from "ai";
 import type { Message } from "discord.js";
 

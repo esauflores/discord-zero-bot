@@ -1,4 +1,4 @@
-import { saveMessage } from "@discord-zero-bot/database/messages";
+import { saveMessage } from "@discord-zero-bot/database";
 import type { Message } from "discord.js";
 
 import { processMedia } from "@/media/index.ts";

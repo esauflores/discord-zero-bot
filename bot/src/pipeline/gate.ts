@@ -1,4 +1,4 @@
-import { recent } from "@discord-zero-bot/database/messages";
+import { recent } from "@discord-zero-bot/database";
 
 import { classifyMessage } from "@/ai/classify.ts";
 

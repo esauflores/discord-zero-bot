@@ -1,4 +1,4 @@
-import { recent } from "@discord-zero-bot/database/messages";
+import { recent } from "@discord-zero-bot/database";
 import { download } from "@discord-zero-bot/storage";
 import { jsonSchema, tool } from "ai";
 import type { Message } from "discord.js";

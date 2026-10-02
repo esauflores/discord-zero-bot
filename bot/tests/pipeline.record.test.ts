@@ -2,7 +2,7 @@ import type { Message } from "discord.js";
 import { expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ values: vi.fn(), transcribe: vi.fn() }));
-vi.mock("@discord-zero-bot/database/messages", () => ({ saveMessage: mocks.values }));
+vi.mock("@discord-zero-bot/database", () => ({ saveMessage: mocks.values }));
 // `process` calls the module-local `transcribe`, so the mock replaces the
 // processor itself. It reuses the real `audioFormat` rather than restating it,
 // so the format mapping is exercised instead of duplicated.

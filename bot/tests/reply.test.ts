@@ -63,8 +63,7 @@ vi.mock("ai", () => ({
   jsonSchema: (schema: unknown) => schema,
   tool: (definition: unknown) => definition,
 }));
-vi.mock("@discord-zero-bot/database/messages", () => ({ recent: mocks.recent }));
-vi.mock("@discord-zero-bot/database/search", () => ({ searchMemory: mocks.search }));
+vi.mock("@discord-zero-bot/database", () => ({ recent: mocks.recent, searchMemory: mocks.search }));
 vi.mock("@discord-zero-bot/storage", () => ({ download: mocks.download }));
 vi.mock("@/tools/generate-image/imageGeneration.ts", () => ({ generateImage: mocks.image }));
 vi.mock("@/pipeline/record.ts", () => ({ record: vi.fn() }));

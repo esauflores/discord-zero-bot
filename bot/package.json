@@ -3,7 +3,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/app.ts"
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "start": "bun --env-file=../.env run src/index.ts"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.62",

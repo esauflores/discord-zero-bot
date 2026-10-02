@@ -3,6 +3,10 @@ import postgres from "postgres";
 
 import * as schema from "./schema";
 
+export * from "./schema";
+export * from "./messages";
+export * from "./search";
+
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is required");
 
