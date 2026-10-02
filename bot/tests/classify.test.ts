@@ -1,7 +1,7 @@
 import type { Message } from "discord.js";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { classifyMessage } from "@/ai/classify.ts";
+import { classifyMessage } from "@/pipeline/ai.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();

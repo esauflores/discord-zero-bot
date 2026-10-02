@@ -1,5 +1,5 @@
 import type { Message } from "discord.js";
-import { beforeAll, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, expect, it, vi } from "vitest";
 
 vi.stubEnv("GUILD_ID", "");
 vi.stubEnv("CHANNEL_IDS", "");
@@ -17,7 +17,6 @@ type PiTool = {
 const mocks = vi.hoisted(() => ({
   recent: vi.fn(),
   search: vi.fn(),
-  image: vi.fn(),
   classify: vi.fn(),
   download: vi.fn(),
   session: vi.fn(),
@@ -65,10 +64,11 @@ vi.mock("ai", () => ({
 }));
 vi.mock("@discord-zero-bot/database", () => ({ recent: mocks.recent, searchMemory: mocks.search }));
 vi.mock("@discord-zero-bot/storage", () => ({ download: mocks.download }));
-vi.mock("@/tools/generate-image/imageGeneration.ts", () => ({ generateImage: mocks.image }));
 vi.mock("@/pipeline/record.ts", () => ({ record: vi.fn() }));
-vi.mock("@/ai/classify.ts", () => ({ classifyMessage: mocks.classify, cheapModel: "deepseek/deepseek-v4.1-flash" }));
-vi.mock("@/pipeline/record.ts", () => ({ record: vi.fn() }));
+vi.mock("@/pipeline/ai.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/pipeline/ai.ts")>()),
+  classifyMessage: mocks.classify,
+}));
 
 const call = (tools: PiTool[], name: string, params: Record<string, string>) => {
   const tool = tools.find((item) => item.name === name);
@@ -81,6 +81,8 @@ beforeAll(() => {
   mocks.classify.mockResolvedValue({ addressed: true, model: "qwen/qwen3.7-flash" });
   mocks.download.mockResolvedValue(new Uint8Array([1, 2, 3]).buffer);
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 it("reads related history and starts image generation without blocking a text reply", async () => {
   const sent = vi.fn();
@@ -115,8 +117,9 @@ it("reads related history and starts image generation without blocking a text re
       },
     },
   ]);
-  let finishImage!: (image: Buffer) => void;
-  mocks.image.mockImplementation(() => new Promise<Buffer>((resolve) => (finishImage = resolve)));
+  let finishImage!: (response: Response) => void;
+  const fetcher = vi.fn().mockReturnValue(new Promise<Response>((resolve) => (finishImage = resolve)));
+  vi.stubGlobal("fetch", fetcher);
   mocks.run.mockImplementationOnce(async (tools: PiTool[], text: string) => {
     expect(text).toContain("Latest 10 messages for context:");
     expect(text).toContain("Directed at you: yes");
@@ -142,10 +145,14 @@ it("reads related history and starts image generation without blocking a text re
   expect(mocks.model).toHaveBeenCalledWith("openrouter", "qwen/qwen3.7-flash");
   expect(mocks.recent).toHaveBeenCalledWith("channel", 11);
   expect(mocks.search).toHaveBeenCalledWith("channel", "cat");
-  expect(mocks.image).toHaveBeenCalledWith("cat");
+  expect(JSON.parse(fetcher.mock.calls[0]?.[1]?.body)).toMatchObject({ prompt: "cat" });
   expect(sent).toHaveBeenCalledTimes(1);
   expect(sent).toHaveBeenCalledWith("Working on it");
-  finishImage(Buffer.from("png"));
+  finishImage(
+    new Response(JSON.stringify({ data: [{ b64_json: Buffer.from("png").toString("base64") }] }), {
+      status: 200,
+    }),
+  );
   await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2));
   expect(sent).toHaveBeenCalledWith({ files: [{ attachment: Buffer.from("png"), name: "generated.png" }] });
 });

@@ -1,7 +1,20 @@
 import type { Message } from "discord.js";
 
-import { cheapModel, jevEndpoint, jevModel, smartModel } from "./models.ts";
+// OpenRouter is the only endpoint: the Decisions API is exclusive to it and the
+// pinned models below are OpenRouter slugs, so there is nothing to configure.
+const apiUrl = "https://openrouter.ai/api/v1";
+const jevEndpoint = "https://openrouter.ai/api/alpha/decisions";
+const jevModel = "typesafe/jev-1.13";
 
+export const imageEndpoint = `${apiUrl}/images/generations`;
+export const imageModel = "meta/muse-image";
+export const transcriptionEndpoint = `${apiUrl}/audio/transcriptions`;
+export const transcriptionModel = "openai/whisper-large-v3-turbo";
+
+// Both accept text and images, so image messages and `open_attachment` results
+// can go straight to them without a separate vision model.
+const cheapModel = "deepseek/deepseek-v4.1-flash";
+const smartModel = "deepseek/deepseek-v4.1-flash";
 const names = /(?:^|[^\p{L}\p{N}_])(?:zerotillo-bot|zero-bot|zerotillo|zero)(?=$|[^\p{L}\p{N}_])/iu;
 
 export async function classifyMessage(

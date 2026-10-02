@@ -1,25 +1,14 @@
-import { recent, searchMemory } from "@discord-zero-bot/database";
+import { recent, searchMemory, type MessageRow } from "@discord-zero-bot/database";
 import { jsonSchema, tool } from "ai";
 import type { Message } from "discord.js";
 
 import { storedAttachments } from "@/media/index.ts";
 
-// Structural, not the exact row shape: `searchMemory` selects a subset and older
-// rows have no snapshot, so only presence of the snapshot is required.
-type ChatEntry = {
-  created_at: Date;
-  author_name: string;
-  content: string;
-  discord_id?: string;
-  discord_message?: unknown;
-};
-
-function formatMessage(entry: ChatEntry): string {
+function formatMessage(entry: MessageRow): string {
   const files = storedAttachments(entry.discord_message).map(
     ({ filename, content_type, size }) => `${filename} (${content_type ?? "unknown type"}, ${size} bytes)`,
   );
-  const handle = entry.discord_id ? `[msg:${entry.discord_id}] ` : "";
-  return `${handle}${entry.created_at.toISOString()} ${entry.author_name}: ${entry.content}${
+  return `[msg:${entry.discord_id}] ${entry.created_at.toISOString()} ${entry.author_name}: ${entry.content}${
     files.length ? `\n  Attachments: ${files.join(", ")}` : ""
   }`;
 }

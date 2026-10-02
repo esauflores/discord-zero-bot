@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 
-import { pendingTasks, startTask } from "@/tasks/index.ts";
+import { pendingTasks, startTask } from "@/pipeline/tasks.ts";
 
 it("tracks a running task per channel and reports its age", async () => {
   let finish!: () => void;

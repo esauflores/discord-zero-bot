@@ -7,17 +7,18 @@ import {
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import type { ToolExecutionOptions } from "ai";
+import type { Message } from "discord.js";
 import { spawn } from "node:child_process";
 import { Type } from "typebox";
 
-import { generateImageTool } from "@/tools/generate-image/index.ts";
-import { openAttachment } from "@/tools/open-attachment/index.ts";
-import { reactToMessage } from "@/tools/react/index.ts";
-import { readChat } from "@/tools/read-chat/index.ts";
-import { respondInDiscord } from "@/tools/respond-in-discord/index.ts";
-import { webSearch } from "@/tools/web-search/index.ts";
+import { generateImageTool } from "@/tools/generate-image.ts";
+import { openAttachment } from "@/tools/open-attachment.ts";
+import { reactToMessage } from "@/tools/react-message.ts";
+import { readChat } from "@/tools/read-chat.ts";
+import { respondInDiscord } from "@/tools/respond-discord.ts";
+import { webSearch } from "@/tools/search-web.ts";
 
-import type { Stage } from "./context.ts";
+import type { Effect } from "./effects.ts";
 import { systemPrompt } from "./prompt.ts";
 
 const toolResult = (text: string) => ({ content: [{ type: "text" as const, text }], details: {} });
@@ -56,16 +57,25 @@ const completed = async <T>(result: T | AsyncIterable<T>): Promise<T> => {
   return last;
 };
 
-/** One isolated Pi run per addressed Discord message; channel history comes from enrich/read_chat. */
-export const respond: Stage = async (ctx) => {
+type RespondInput = {
+  message: Message;
+  model: string;
+  effects: Effect[];
+  state: { imageRequested: boolean };
+  promptText: string;
+  promptFiles: { url: string; mediaType: string }[];
+};
+
+/** One isolated Pi run per addressed Discord message; channel history comes from the prompt/read_chat. */
+export async function respond(input: RespondInput): Promise<{ modelText: string; steps: number }> {
   const key = process.env.AI_API_KEY;
   if (!key) throw new Error("AI_API_KEY is required");
   const modelRuntime = await runtime;
   await modelRuntime.setRuntimeApiKey("openrouter", key);
-  const model = modelRuntime.getModel("openrouter", ctx.model);
-  if (!model) throw new Error(`Model not found in registry: openrouter/${ctx.model}`);
+  const model = modelRuntime.getModel("openrouter", input.model);
+  if (!model) throw new Error(`Model not found in registry: openrouter/${input.model}`);
 
-  const { message } = ctx;
+  const { message } = input;
   let calls = 0;
   const tools: ToolDefinition[] = [
     {
@@ -74,7 +84,7 @@ export const respond: Stage = async (ctx) => {
       description: "Reply to this Discord message. Call only when you want to speak; otherwise stay silent.",
       parameters: Type.Object({ text: Type.String({ description: "Reply text (up to 2000 characters)" }) }),
       execute: async (id, { text }, signal) =>
-        toolResult(await completed(respondInDiscord(ctx.effects).execute({ text }, toolOptions(id, signal)))),
+        toolResult(await completed(respondInDiscord(input.effects).execute({ text }, toolOptions(id, signal)))),
     },
     {
       name: "read_chat",
@@ -124,7 +134,7 @@ export const respond: Stage = async (ctx) => {
       description: "Add one emoji reaction to the current message, only when warranted.",
       parameters: Type.Object({ emoji: Type.String({ description: "Single emoji" }) }),
       execute: async (id, { emoji }, signal) =>
-        toolResult(await completed(reactToMessage(ctx.effects).execute({ emoji }, toolOptions(id, signal)))),
+        toolResult(await completed(reactToMessage(input.effects).execute({ emoji }, toolOptions(id, signal)))),
     },
     {
       name: "generate_image",
@@ -132,7 +142,9 @@ export const respond: Stage = async (ctx) => {
       description: "Start image generation in the background; the image is sent to Discord when ready.",
       parameters: Type.Object({ prompt: Type.String({ description: "Detailed image description" }) }),
       execute: async (id, { prompt }, signal) =>
-        toolResult(await completed(generateImageTool(message, ctx.state).execute({ prompt }, toolOptions(id, signal)))),
+        toolResult(
+          await completed(generateImageTool(message, input.state).execute({ prompt }, toolOptions(id, signal))),
+        ),
     },
     {
       name: "web_search",
@@ -179,7 +191,7 @@ export const respond: Stage = async (ctx) => {
   try {
     await session.bindExtensions({});
     const images = await Promise.all(
-      ctx.promptFiles
+      input.promptFiles
         .filter((file) => file.mediaType.startsWith("image/"))
         .map(async (file) => {
           const url = new URL(file.url);
@@ -194,19 +206,18 @@ export const respond: Stage = async (ctx) => {
           };
         }),
     );
-    const files = ctx.promptFiles
+    const files = input.promptFiles
       .filter((file) => !file.mediaType.startsWith("image/"))
       .map((file) => `Attachment (${file.mediaType}): use open_attachment to inspect it.`)
       .join("\n");
-    await session.prompt(`${ctx.promptText}\n${files}`, { images, expandPromptTemplates: false });
+    await session.prompt(`${input.promptText}\n${files}`, { images, expandPromptTemplates: false });
     if (calls > 6) throw new Error("Pi tool-call limit reached (6)");
     const assistants = session.messages.filter((entry) => entry.role === "assistant");
     const last = assistants.at(-1);
     if (last?.stopReason === "error" || last?.stopReason === "aborted")
       throw new Error(last.errorMessage ?? `Pi response ${last.stopReason}`);
-    ctx.modelText = session.getLastAssistantText() ?? "";
-    ctx.steps = assistants.length;
+    return { modelText: session.getLastAssistantText() ?? "", steps: assistants.length };
   } finally {
     session.dispose();
   }
-};
+}

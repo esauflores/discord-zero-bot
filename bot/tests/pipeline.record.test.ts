@@ -147,7 +147,11 @@ it("transcribes a voice note into the message content using the on-disk format",
 
     // Silence returns an empty transcript, which must not be stored as "".
     mocks.transcribe.mockResolvedValue("");
+    fetchMock
+      .mockResolvedValueOnce(new Response("opus bytes", { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
     await record(msg);
+    expect(mocks.transcribe).toHaveBeenCalledTimes(2);
     const silent = mocks.values.mock.lastCall?.[0] as {
       content: string;
       discord_message: { attachments: { transcript: string | null }[] };

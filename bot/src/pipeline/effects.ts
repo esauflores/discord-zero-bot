@@ -1,3 +1,5 @@
+import type { Message } from "discord.js";
+
 /**
  * Something a capability wants to happen in Discord. Tools record these instead of
  * writing directly, so `deliver` is the only place that talks to Discord and can
@@ -40,4 +42,34 @@ export function queueReaction(effects: Effect[], emoji: string): string | null {
   if (!trimmed || [...trimmed].length > 2) return "Reaction ignored.";
   effects.push({ kind: "react", emoji: trimmed });
   return null;
+}
+
+/** Executes queued Discord writes, falling back to plain model text when needed. */
+export async function deliver(
+  message: Message,
+  effects: Effect[],
+  modelText: string,
+  imageRequested: boolean,
+): Promise<{ sent: boolean; fallback: boolean }> {
+  const fallback = !effects.some((effect) => effect.kind === "reply") && Boolean(modelText.trim());
+  if (fallback) effects.push({ kind: "reply", text: modelText.trim().slice(0, 2000) });
+
+  for (const effect of effects) {
+    try {
+      if (effect.kind === "reply") {
+        await message.reply(effect.text);
+        console.log(`[sent] #${message.channelId} message ${message.id} text${fallback ? " (fallback)" : ""}`);
+      } else {
+        await message.react(effect.emoji);
+        console.log(`[react] #${message.channelId} message ${message.id} ${effect.emoji}`);
+      }
+    } catch (error) {
+      console.error(`[deliver] #${message.channelId} message ${message.id} ${effect.kind} failed`, error);
+    }
+  }
+
+  const sent = effects.some((effect) => effect.kind === "reply");
+  const reacted = effects.some((effect) => effect.kind === "react");
+  if (!sent && !reacted && !imageRequested) console.log(`[silent] #${message.channelId} message ${message.id}`);
+  return { sent, fallback };
 }

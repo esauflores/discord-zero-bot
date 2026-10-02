@@ -1,4 +1,4 @@
-import { transcriptionEndpoint, transcriptionModel } from "@/ai/models.ts";
+import { transcriptionEndpoint, transcriptionModel } from "@/pipeline/ai.ts";
 
 import { audioFormat, type Processor } from "./types.ts";
 

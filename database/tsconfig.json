@@ -8,7 +8,8 @@
     "skipLibCheck": true,
     "noEmit": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "paths": { "@/*": ["./src/*"] }
   },
   "include": ["src", "drizzle.config.ts"]
 }

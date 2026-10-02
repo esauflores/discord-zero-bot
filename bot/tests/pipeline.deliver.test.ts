@@ -1,61 +1,36 @@
 import { expect, it, vi } from "vitest";
 
-import type { ChatContext } from "@/pipeline/context.ts";
-import { deliver } from "@/pipeline/deliver.ts";
+import { deliver, type Effect } from "@/pipeline/effects.ts";
 
-function makeContext(overrides: Partial<ChatContext> = {}): {
-  ctx: ChatContext;
-  reply: ReturnType<typeof vi.fn>;
-  react: ReturnType<typeof vi.fn>;
-} {
+function setup() {
   const reply = vi.fn().mockResolvedValue(undefined);
   const react = vi.fn().mockResolvedValue(undefined);
-  const base = {
-    message: { id: "message", channelId: "channel", reply, react },
-    receivedAt: Date.now(),
-    chat: [],
-    addressed: true,
-    model: "qwen/qwen3.7-flash",
-    state: { imageRequested: false },
-    effects: [],
-    modelText: "",
-    steps: 1,
-    promptText: "",
-    promptFiles: [],
-    sent: false,
-    fallback: false,
-    halt: false,
-    timings: {},
-    ...overrides,
-  } as unknown as ChatContext;
-  return { ctx: base, reply, react };
+  const message = { id: "message", channelId: "channel", reply, react } as never;
+  return { message, reply, react };
 }
 
 it("publishes the model text when no reply effect was queued", async () => {
-  const { ctx, reply } = makeContext({ modelText: "  qué ondas maje  " });
-  await deliver(ctx);
+  const { message, reply } = setup();
+  const result = await deliver(message, [], "  qué ondas maje  ", false);
   expect(reply).toHaveBeenCalledExactlyOnceWith("qué ondas maje");
-  expect(ctx.sent).toBe(true);
-  expect(ctx.fallback).toBe(true);
+  expect(result).toEqual({ sent: true, fallback: true });
 });
 
 it("sends a queued reply and does not mark it as a fallback", async () => {
-  const { ctx, reply } = makeContext({
-    effects: [{ kind: "reply", text: "hola" }],
-    modelText: "texto que no debe enviarse",
-  });
-  await deliver(ctx);
+  const { message, reply } = setup();
+  const effects: Effect[] = [{ kind: "reply", text: "hola" }];
+  const result = await deliver(message, effects, "texto que no debe enviarse", false);
   expect(reply).toHaveBeenCalledExactlyOnceWith("hola");
-  expect(ctx.fallback).toBe(false);
+  expect(result.fallback).toBe(false);
 });
 
 it("counts a reaction as activity instead of logging the message as silent", async () => {
   const log = vi.spyOn(console, "log").mockImplementation(() => {});
   try {
-    const { ctx, react } = makeContext({ effects: [{ kind: "react", emoji: "😂" }] });
-    await deliver(ctx);
+    const { message, react } = setup();
+    const result = await deliver(message, [{ kind: "react", emoji: "😂" }], "", false);
     expect(react).toHaveBeenCalledExactlyOnceWith("😂");
-    expect(ctx.sent).toBe(false);
+    expect(result.sent).toBe(false);
     expect(log.mock.calls.map(([line]) => String(line)).join("\n")).not.toContain("[silent]");
   } finally {
     log.mockRestore();
@@ -65,8 +40,8 @@ it("counts a reaction as activity instead of logging the message as silent", asy
 it("logs a silent message when the model neither spoke nor reacted", async () => {
   const log = vi.spyOn(console, "log").mockImplementation(() => {});
   try {
-    const { ctx } = makeContext();
-    await deliver(ctx);
+    const { message } = setup();
+    await deliver(message, [], "", false);
     expect(log.mock.calls.map(([line]) => String(line))).toContainEqual("[silent] #channel message message");
   } finally {
     log.mockRestore();
@@ -76,17 +51,19 @@ it("logs a silent message when the model neither spoke nor reacted", async () =>
 it("keeps going when one effect fails", async () => {
   const error = vi.spyOn(console, "error").mockImplementation(() => {});
   try {
-    const { ctx, reply, react } = makeContext({
-      effects: [
+    const { message, reply, react } = setup();
+    react.mockRejectedValue(new Error("reaction not allowed"));
+    const result = await deliver(
+      message,
+      [
         { kind: "react", emoji: "😂" },
         { kind: "reply", text: "igual respondo" },
       ],
-    });
-    react.mockRejectedValue(new Error("reaction not allowed"));
-    await deliver(ctx);
-    // The failed reaction must not abort the queued reply.
+      "",
+      false,
+    );
     expect(reply).toHaveBeenCalledExactlyOnceWith("igual respondo");
-    expect(ctx.sent).toBe(true);
+    expect(result.sent).toBe(true);
     expect(error).toHaveBeenCalled();
   } finally {
     error.mockRestore();

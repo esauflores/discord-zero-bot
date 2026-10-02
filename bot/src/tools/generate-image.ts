@@ -1,9 +1,25 @@
 import { jsonSchema, tool } from "ai";
 import type { Message } from "discord.js";
 
-import { pendingTasks, startTask } from "@/tasks/index.ts";
+import { imageEndpoint, imageModel } from "@/pipeline/ai.ts";
+import { pendingTasks, startTask } from "@/pipeline/tasks.ts";
 
-import { generateImage } from "./imageGeneration.ts";
+export async function generateImage(prompt: string): Promise<Buffer> {
+  const apiKey = process.env.AI_API_KEY;
+  if (!apiKey) throw new Error("AI_API_KEY is required for image generation");
+
+  const response = await fetch(imageEndpoint, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: imageModel, prompt, n: 1 }),
+  });
+  if (!response.ok) throw new Error(`Image generation failed (${response.status}): ${await response.text()}`);
+
+  const result = (await response.json()) as { data?: { b64_json?: string }[] };
+  const image = result.data?.[0]?.b64_json;
+  if (!image) throw new Error("Image generation returned no image data");
+  return Buffer.from(image, "base64");
+}
 
 export function generateImageTool(message: Message, state: { imageRequested: boolean }) {
   return tool({
