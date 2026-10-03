@@ -193,6 +193,20 @@ it("never posts final model text, but does publish explicit reply tools", async 
   expect(msg.reply).toHaveBeenCalledExactlyOnceWith("hi");
 });
 
+it("logs completion metadata without exposing final text", async () => {
+  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  mocks.run.mockImplementationOnce(async (_tools: PiTool[], _text: string, _input: unknown, session) => {
+    session.messages = [{ role: "assistant", stopReason: "stop", content: [{ type: "text", text: "private answer" }] }];
+  });
+  const msg = message();
+  await onMessageCreate(msg);
+  expect(log).toHaveBeenCalledWith(
+    "[pi] #channel message current stop=stop toolCalls=0 finalText=true effects=0 imageRequested=false",
+  );
+  expect(JSON.stringify(log.mock.calls)).not.toContain("private answer");
+  expect(msg.reply).not.toHaveBeenCalled();
+});
+
 it("allows a reaction-only response without publishing final text", async () => {
   const msg = message();
   mocks.run.mockImplementationOnce(async (tools: PiTool[]) => {
@@ -213,7 +227,7 @@ it("describes current attachments as metadata without downloading them", async (
   });
   await onMessageCreate(msg);
   expect(mocks.run.mock.lastCall?.[1]).toContain(
-    "Attachments (metadata only; contents unavailable): notes.pdf (application/pdf, 9 bytes)",
+    "Attachment metadata (see attachment input status for content availability): notes.pdf (application/pdf, 9 bytes)",
   );
   expect(mocks.run.mock.lastCall?.[2]).toEqual({ expandPromptTemplates: false });
   expect(fetcher).not.toHaveBeenCalled();

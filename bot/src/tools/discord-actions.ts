@@ -8,7 +8,8 @@ export function respondInDiscord(effects: Effect[]) {
   return {
     name: "respond_in_discord",
     label: "Respond in Discord",
-    description: "Reply to this Discord message. Call only when you want to speak; otherwise stay silent.",
+    description:
+      "Reply to this Discord message. Use this tool to answer direct questions, greetings, and requests. Final assistant text is not delivered.",
     parameters: Type.Object({ text: Type.String({ description: "Reply text (up to 2000 characters)" }) }),
     execute: async (_id: string, { text }: { text: string }) => ({
       content: [{ type: "text" as const, text: queueReply(effects, text) ?? "Reply queued; it will be sent." }],

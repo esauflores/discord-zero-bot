@@ -42,7 +42,7 @@ function enrich(message: Message, previous: Awaited<ReturnType<typeof recent>>) 
     )
     .join("");
   return {
-    promptText: `Latest 10 messages for context:\n${context || "(none)"}\n\nDirected at you: yes\nCurrent message — ${message.author.username}: ${message.content || "(no text)"}${message.attachments.size ? `\nAttachments (metadata only; contents unavailable): ${[...message.attachments.values()].map((file) => `${file.name} (${file.contentType ?? "unknown type"}, ${file.size} bytes)`).join(", ")}` : ""}${inProgress}`,
+    promptText: `Latest 10 messages for context:\n${context || "(none)"}\n\nDirected at you: yes\nCurrent message — ${message.author.username}: ${message.content || "(no text)"}${message.attachments.size ? `\nAttachment metadata (see attachment input status for content availability): ${[...message.attachments.values()].map((file) => `${file.name} (${file.contentType ?? "unknown type"}, ${file.size} bytes)`).join(", ")}` : ""}${inProgress}`,
   };
 }
 

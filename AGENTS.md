@@ -30,7 +30,7 @@ Never read or expose `.env` secrets. Use `.env.example` for configuration docume
 
 - Guild/channel filters apply before both storage and responses. Ignore other bots; record this bot's own messages without responding to them.
 - Retain the latest 1,000 messages globally; use the latest 10 channel messages for context. Queries are parameterized and history tools are channel-scoped.
-- Incoming attachments are metadata-only. Do not download, analyze, transcribe, or claim to read their contents.
+- Current-message PNG/JPEG/WebP/GIF images and PDFs may be supplied to the response model: at most three files / 5 MiB combined, Discord CDN HTTPS only, 10-second download timeout. PDFs use OpenRouter `file-parser` / `mistral-ocr`. Storage and historical context remain metadata-only; audio and unsupported/failed files cannot be read. Never claim unavailable contents were analyzed.
 - Final model text is never published. Text and reactions go through explicit tools and centralized delivery.
 - Generated mentions are intentionally allowed on this personal server. Do not change that policy unrequested.
 - Reaction validation rejects empty input; Discord validates the emoji. Do not reintroduce Unicode character-count limits.

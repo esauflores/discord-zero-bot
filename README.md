@@ -1,6 +1,6 @@
 # discord-zero-bot
 
-A small Discord bot that replies when addressed, keeps bounded message history in SQLite, searches the web, and generates images. Incoming attachments are metadata-only; their contents are not downloaded or analyzed.
+A small Discord bot that replies when addressed, keeps bounded message history in SQLite, searches the web, and generates images. Current-message images and PDFs can be analyzed; audio and other files remain metadata-only.
 
 ## Architecture
 
@@ -33,7 +33,7 @@ bun --env-file=.env run start
 
 ## Attachment handling
 
-Only attachment metadata (including names, types, sizes, descriptions and Discord URLs) is stored. The bot cannot read images, PDFs or audio; paste relevant content as text. No file archive, image summarization or transcription is implemented.
+Only attachment metadata is stored in SQLite. For addressed messages, up to three current-message images/PDFs are downloaded from Discord's CDN, within a combined 5 MiB budget and 10-second timeout per file. PNG, JPEG, WebP and GIF use Pi image input; PDFs use OpenRouter's `file-parser` with `mistral-ocr` (additional OCR charges may apply). Unsupported or failed downloads remain metadata-only. Historical files are not fetched, no file archive is kept, and audio transcription is not supported.
 
 Image generation is separate: the prompt is sent to OpenRouter, and the generated image is posted to Discord when ready. One image task can run per channel, with a 90-second API deadline. Further image requests in that channel are rejected while it is busy; other channels and text replies continue independently. Results reply directly to Discord, not back to the Pi session. Tasks are process-local and do not survive a restart.
 

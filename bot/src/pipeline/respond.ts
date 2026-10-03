@@ -13,6 +13,7 @@ import { generateImageTool } from "@/tools/generate-image.ts";
 import { readChat } from "@/tools/read-chat.ts";
 import { webSearch } from "@/tools/search-web.ts";
 
+import { addPdfs, loadAttachments } from "./attachments.ts";
 import type { Effect } from "./effects.ts";
 import { systemPrompt } from "./prompt.ts";
 
@@ -79,11 +80,26 @@ export async function respond(input: RespondInput): Promise<{ steps: number }> {
   }, 120_000);
   try {
     await session.bindExtensions({});
-    await session.prompt(input.promptText, { expandPromptTemplates: false });
+    const attachments = await loadAttachments(input.message);
+    if (attachments.pdfs.length)
+      session.agent.onPayload = (payload) => {
+        addPdfs(payload, attachments.pdfs);
+      };
+    await session.prompt(
+      `${input.promptText}\n\nAttachment input status:\n${attachments.notes.join("\n") || "No supported attachment contents supplied."}`,
+      {
+        expandPromptTemplates: false,
+        ...(attachments.images.length ? { images: attachments.images } : {}),
+      },
+    );
     if (timedOut) throw new Error("Pi response timed out (120s)");
     if (calls > 6) throw new Error("Pi tool-call limit reached (6)");
     const assistants = session.messages.filter((entry) => entry.role === "assistant");
     const last = assistants.at(-1);
+    const hasFinalText = last?.content?.some((part) => part.type === "text" && part.text.trim().length > 0) ?? false;
+    console.log(
+      `[pi] #${input.message.channelId} message ${input.message.id} stop=${last?.stopReason ?? "none"} toolCalls=${calls} finalText=${hasFinalText} effects=${input.effects.length} imageRequested=${input.state.imageRequested}`,
+    );
     if (last?.stopReason === "error" || last?.stopReason === "aborted")
       throw new Error(last.errorMessage ?? `Pi response ${last.stopReason}`);
     return { steps: assistants.length };
