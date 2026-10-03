@@ -36,6 +36,12 @@ services:
         condition: service_healthy
       storage:
         condition: service_started
+    command:
+      - sh
+      - -c
+      - >-
+        cd database && bun run generate && bun run migrate &&
+        cd .. && bun run bot/src/index.ts
     restart: unless-stopped
 
 volumes:

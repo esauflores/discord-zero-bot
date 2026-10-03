@@ -6,6 +6,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
     "push": "drizzle-kit push"
   },
   "dependencies": {

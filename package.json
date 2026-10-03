@@ -10,7 +10,8 @@
   "scripts": {
     "check": "oxlint && oxfmt --check && tsc -p database && tsc -p storage && tsc -p bot",
     "check:fix": "oxlint --fix && oxfmt --write",
-    "dev": "docker compose up -d database storage && cd bot && bun run start"
+    "dev": "docker compose up -d database storage && cd bot && bun run start",
+    "start": "bun run bot/src/index.ts"
   },
   "devDependencies": {
     "bun-types": "^1.4.2",

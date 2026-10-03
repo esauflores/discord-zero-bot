@@ -148,6 +148,74 @@ Files only if used). Invite URL shape:
 https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&scope=bot&permissions=274878024704
 ```
 
+## deploy to Railway
+
+### First deploy
+
+1. Install the [Railway CLI](https://docs.railway.com/guides/cli) and log in:
+
+   ```bash
+   railway login
+   ```
+
+2. From this repository, create a Railway project and add three services:
+   - **Postgres** from Railway's PostgreSQL template, with a persistent volume.
+   - **SeaweedFS** using `storage/Dockerfile`, with a persistent volume mounted at `/data`.
+   - **bot** built from this repository with `bot/Dockerfile`.
+
+3. Set the bot service variables from `.env.example` / your local `.env`:
+   `DISCORD_TOKEN`, `AI_API_KEY`, and any optional bot settings. Set storage S3
+   credentials to match the SeaweedFS service.
+
+4. Set the bot's `DATABASE_URL` to the Postgres service's **private** URL, using
+   the actual existing Postgres role, password, and database. For a database
+   created from the Railway template, reference its `DATABASE_URL` variable
+   rather than assuming `discord_bot` exists:
+
+   ```text
+   ${{Postgres.DATABASE_URL}}
+   ```
+
+   If the bot needs a different database/schema, create it in Postgres first.
+   Changing `POSTGRES_USER` or `POSTGRES_DB` variables does not change an
+   already-initialized Postgres volume.
+
+5. Set `SEAWEEDFS_ENDPOINT` to the service's private address, for example
+   `http://seaweedfs.railway.internal:8333`. Keep the bot, Postgres, and
+   SeaweedFS in the same Railway project/environment.
+
+6. Deploy from the repository root. The Railway CLI uploads this workspace; the
+   explicit `--path-as-root` avoids CLI indexing stalls seen in this setup:
+
+   ```bash
+   railway link
+   railway up --service bot --detach \\
+     --path-as-root "$PWD"
+   ```
+
+   If Railpack reports `No start command detected`, ensure the root
+   `package.json` has a `start` script that launches `bot/src/index.ts`:
+   `"start": "bun run bot/src/index.ts"`.
+
+### Redeploy and verify
+
+```bash
+railway up --service bot --detach --path-as-root "$PWD"
+railway service status --service bot
+railway logs --service bot --lines 100
+railway metrics --service bot --memory --since 1h
+```
+
+Logs should show `logged in as ...`; successful message handling includes
+`[msg]`, database/persist timings, and `[sent]` when the bot replies. Postgres
+errors such as `Role "discord_bot" does not exist` mean the bot URL points to a
+role not present in the already-initialized database; use its actual Railway
+`DATABASE_URL` or create the role/database. The Compose startup migration setup
+is for Docker Compose and does not run on Railway.
+
+**Back up persistent volumes before recreating Postgres.** Never put tokens or
+passwords in source control; configure them as Railway variables.
+
 ## dev
 
 `bun run dev` · `bun run check` (lint + format + types) · `bun run check:fix` · `bun run --cwd bot test`
