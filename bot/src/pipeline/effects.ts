@@ -2,8 +2,8 @@ import type { Message } from "discord.js";
 
 /**
  * Something a capability wants to happen in Discord. Tools record these instead of
- * writing directly, so `deliver` is the only place that talks to Discord and can
- * de-duplicate what a multi-step model produces.
+ * writing directly, so `deliver` de-duplicates text replies and reactions.
+ * Background image tasks send their own result when ready.
  */
 export type Effect = { kind: "reply"; text: string } | { kind: "react"; emoji: string };
 
@@ -39,28 +39,29 @@ export function queueReply(effects: Effect[], text: string): string | null {
 export function queueReaction(effects: Effect[], emoji: string): string | null {
   if (effects.some((effect) => effect.kind === "react")) return "Already reacted to this message.";
   const trimmed = emoji.trim();
-  if (!trimmed || [...trimmed].length > 2) return "Reaction ignored.";
+  if (!trimmed) return "Reaction ignored.";
   effects.push({ kind: "react", emoji: trimmed });
   return null;
 }
 
-/** Executes queued Discord writes, falling back to plain model text when needed. */
+/** Publishes only queued effects, never the agent's final text. */
 export async function deliver(
   message: Message,
   effects: Effect[],
-  modelText: string,
   imageRequested: boolean,
-): Promise<{ sent: boolean; fallback: boolean }> {
-  const fallback = !effects.some((effect) => effect.kind === "reply") && Boolean(modelText.trim());
-  if (fallback) effects.push({ kind: "reply", text: modelText.trim().slice(0, 2000) });
+): Promise<{ sent: boolean }> {
+  let sent = false;
+  let reacted = false;
 
   for (const effect of effects) {
     try {
       if (effect.kind === "reply") {
         await message.reply(effect.text);
-        console.log(`[sent] #${message.channelId} message ${message.id} text${fallback ? " (fallback)" : ""}`);
+        sent = true;
+        console.log(`[sent] #${message.channelId} message ${message.id} text`);
       } else {
         await message.react(effect.emoji);
+        reacted = true;
         console.log(`[react] #${message.channelId} message ${message.id} ${effect.emoji}`);
       }
     } catch (error) {
@@ -68,8 +69,6 @@ export async function deliver(
     }
   }
 
-  const sent = effects.some((effect) => effect.kind === "reply");
-  const reacted = effects.some((effect) => effect.kind === "react");
   if (!sent && !reacted && !imageRequested) console.log(`[silent] #${message.channelId} message ${message.id}`);
-  return { sent, fallback };
+  return { sent };
 }

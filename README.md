@@ -1,221 +1,52 @@
 # discord-zero-bot
 
-A conversational participant for my study Discord server. It records messages
-(channel memory) and processes every channel message, but only speaks when
-addressed (including Zero, Zerotillo, Zerotillo-bot, or Zero-bot). No slash
-commands. Specific bot for my server — not a product.
+A small Discord bot that replies when addressed, keeps bounded message history in SQLite, searches the web, and generates images. Incoming attachments are metadata-only; their contents are not downloaded or analyzed.
 
-## how it works
+## Architecture
 
-Bun workspaces: `database/` owns the Drizzle schema, Postgres connection, and
-query helpers; `storage/` owns the SeaweedFS container and object helpers; `bot/`
-uses both and translates Discord messages into records. Each workspace has
-its own `tsconfig.json`; root scripts and `docker-compose.yml` tie them together.
+[![Discord Zero Bot architecture](docs/architecture.png)](docs/architecture.html)
 
-Each workspace has one public entry point:
+Open `docs/architecture.html` locally for the interactive diagram; `docs/architecture.json` is its editable source.
 
-| specifier                    | exports                                                                  |
-| ---------------------------- | ------------------------------------------------------------------------ |
-| `@discord-zero-bot/database` | connection, schema, and message queries                                  |
-| `@discord-zero-bot/storage`  | `bucket`, `upload`, `download`                                           |
-| `@discord-zero-bot/bot`      | the Discord runtime (`client`, `runChat`); importing it starts the login |
+Messages flow through scope filtering, recording, Jev classification, an isolated Pi agent session, and explicit Discord delivery. Pi can read saved channel history, search with Brave, and start background image generation.
 
-`bot/src/` is four groups: `events/` accepts Discord events, `pipeline/` owns the
-message flow and AI configuration, `media/` processes attachments, and `tools/`
-exposes model capabilities. `pipeline/index.ts` spells out the fixed flow directly;
-there is no generic stage framework or mutable pipeline context.
-
-Adding a media type (image captions, say) is a `Processor` appended to `processors`
-in `media/index.ts`. Tools queue `Effect` values in `pipeline/effects.ts`, whose
-`deliver()` function allows at most one reply and one reaction per message.
-
-**boot** (`bot/src/index.ts`): env → postgres (drizzle) → Discord client
-(intents: `Guilds` + `GuildMessages` + `MessageContent`) → load events → gateway login. `CHANNEL_IDS`
-can restrict both recording and replies to a comma-separated set of channel IDs;
-empty means all channels.
-
-**every message** (`bot/src/events/messageCreate.ts`): scope check, then `runChat()`
-records the message and archives its media (including our own replies). For user
-messages, `pipeline/index.ts` loads the previous 10 messages and asks Jev 1.13
-whether to answer; addressed messages get an isolated in-memory Pi session with
-recent context, readable attachments, and any background work in the channel.
-Both Jev routes currently use `deepseek/deepseek-v4.1-flash`. Direct mentions/replies
-always count as addressed. Bot messages are recorded but never answered.
-The model can call `respond_in_discord` to speak, `read_chat` for related older history
-(including attachment names, types, and sizes), `open_attachment` to read a saved
-image, PDF, or text file (even one sent long ago), `react` to add one emoji,
-`generate_image` to attach an image in the background, and `web_search`
-(Brave Search API; optional `BRAVE_API_KEY`) for external research. If the model answers
-with plain text instead of calling `respond_in_discord`, `deliver` still publishes
-that text (logged as `text (fallback)`) rather than dropping a real reply.
-Logs show when evaluation starts, tools run, and whether
-the bot replied or stayed silent, plus a timing line
-(`persist=…ms gate=…ms enrich=…ms respond=…ms deliver=…ms total=…ms steps=N`).
-Ordinary messages incur only the small
-classifier request, not a full chat-model call.
-`discord_id` is unique with `onConflictDoNothing`, so redelivered gateway
-events never create duplicates.
-
-**media** (`bot/src/media/`): an attachment is downloaded once, stored in SeaweedFS,
-then offered to every registered `Processor`. Audio is transcribed
-(`whisper-large-v3-turbo`) and the transcript is merged into the message `content`,
-so search and the models both see it with no special handling; the original bytes
-stay reachable through `storage_key`. Only `audio/*` is handled today — adding image
-captions means one processor file and one array entry. A processor that fails is
-logged and skipped, so one capability cannot break archiving.
-
-**memory** (`database/src/schema/messages.ts`): Postgres stores the message text/index
-fields plus a Discord-shaped JSON snapshot with attachment metadata and
-SeaweedFS object keys. Attachment bytes are copied from Discord's CDN to the
-private SeaweedFS S3 gateway before the row is inserted. If an upload fails,
-the message and attachment metadata are still saved with a null storage key
-(and the failure is logged). Existing rows have a null snapshot; edits and
-deletions are not synced yet. The bot reads the latest 10 messages and can
-search older messages on demand, including their saved attachment metadata.
-The unused `summaries` table is no longer in the schema; `bun run --cwd database push`
-may remove existing summary rows, so back them up first if needed.
-
-## stack (decided)
-
-| piece           | choice                                        | notes                                                                                          |
-| --------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| bot framework   | discord.js v14                                | ecosystem default                                                                              |
-| runtime         | bun                                           | spike 2026-10: S1–S4 PASS on bun 1.4.2 — node 24 identical as fallback                         |
-| database        | postgres                                      | `bun run --cwd database push`; messages and queries live in `database/src/schema/messages.ts`  |
-| storage         | SeaweedFS (private S3 gateway)                | attachment bytes in the `seaweedfs_data` volume; upload/download in `storage/src/index.ts`     |
-| AI layer (core) | Pi embed SDK for replies; Jev for routing     | OpenRouter: DeepSeek V4.1 Flash answers all addressed messages; Jev still gates and classifies |
-| tooling         | oxlint + oxfmt --check + tsc --noEmit, vitest | `bun run check`                                                                                |
-
-`AI_API_KEY` is all the AI layer needs: OpenRouter is the only endpoint. Pi runs
-one isolated, in-memory answering session per addressed message; channel history
-comes from the database, not Pi session persistence. PDF text extraction requires
-`pdftotext` (installed in the bot image); PDFs without extractable text cannot be read.
-AI endpoints, model IDs, and classification live together in
-`bot/src/pipeline/ai.ts`. Address detection and model routing use the
-[Jev Decisions API](https://openrouter.ai/docs/guides/community/jev-tutorial)
-(`typesafe/jev-1.13`); local OpenAI-compatible servers do not offer this endpoint
-or the pinned models. On Jev failure, direct mentions/replies and name calls still
-work using DeepSeek, but contextual follow-ups cannot be detected. Image generation
-uses OpenRouter's `/api/v1/images/generations` endpoint with `meta/muse-image`; ask
-the bot to generate an image and it may use
-`generate_image`. Generation is billed separately (Muse Image is listed from
-$0.01/image). See [Muse Image on OpenRouter](https://openrouter.ai/meta/muse-image).
-
-## retrieval ladder (deferred — only when channel memory needs more)
-
-1. **postgres `tsvector` full-text search** — zero new infra, try first
-   (opencode ships no RAG at all — grep + LSP + context stuffing)
-2. **pgvector + AI SDK `embed()`** — model: hosted `text-embedding-3-small` or
-   local transformers.js/ONNX when message locality matters; store model id +
-   dimension with vectors
-3. RAG frameworks — never; retrieval is `ORDER BY embedding <=> $1 LIMIT k`
-
-## research basis (2025–2026)
-
-- baseline server bots are utilities (MEE6/Dyno/Carl-bot); recap/assistant bots
-  are small and fragmented (Summary Bot self-reports ~792 servers)
-- the loved UX is **private, on-demand, cited** (`/catchup`, `/ask` + jump-links);
-  unsolicited channel posts are the annoyance pattern
-- **silent archiving is rare and trust-costly** — notice/consent + retention are
-  core constraints, not polish ([Developer Policy](https://discord.com/developers/docs/policies-and-agreements/developer-policy))
-- no standard memory stack exists; raw messages stay the source of truth until
-  retrieval needs prove otherwise
-- platform policy: app verification past 100 guilds; privileged-intent review at
-  10k accessible users; Message Content intent is privileged and we need it
-- voice (parked): Polly ≈ $0.11/30 min, ElevenLabs from $6/mo; `@discordjs/voice`
-  accepts streams — revisit only if audio returns to scope
-- hosting when deployed: Fly ≈ $1.94/mo, Railway $5, Render Starter $7 —
-  never free tiers (they spin down)
-
-## setup
+## Run locally with Docker Compose
 
 ```bash
 cp .env.example .env
-docker compose up -d database storage
-bun install
-bun run --cwd database push
-docker compose up -d --build bot
+# Set DISCORD_TOKEN and AI_API_KEY (OpenRouter) in .env
+docker compose up -d --build
 ```
 
-Portal: developer.discord.com → app → **Bot** → token + enable the **Message
-Content** intent (privileged — separate from the invite). **Installation** → Guild
-Install → scope `bot` is all that's needed (`applications.commands` ships with it
-by default; this bot has no commands). Minimal permissions: View Channels, Read
-Message History, Send Messages, Send Messages in Threads (+ Embed Links / Attach
-Files only if used). Invite URL shape:
+Enable **Message Content Intent** for the bot in the Discord Developer Portal. The bot needs access to the channels and permissions to send messages, attach files, and add reactions.
 
-```text
-https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&scope=bot&permissions=274878024704
-```
+SQLite lives in the `sqlite_data` Docker volume at `/data/messages.sqlite`. For local runs, `SQLITE_PATH` defaults to `./data/messages.sqlite`; its parent directory is created automatically. The latest 1,000 messages are retained across all eligible channels, with the latest 10 used for context and older retained messages available through search.
 
-## deploy to Railway
+Set `GUILD_ID` and comma-separated `CHANNEL_IDS` to restrict both recording and responses. Empty values allow all guilds/channels the bot can access. Messages from other bots are ignored; this bot's own replies are recorded for context. `BRAVE_API_KEY` enables web search.
 
-### First deploy
-
-1. Install the [Railway CLI](https://docs.railway.com/guides/cli) and log in:
-
-   ```bash
-   railway login
-   ```
-
-2. From this repository, create a Railway project and add three services:
-   - **Postgres** from Railway's PostgreSQL template, with a persistent volume.
-   - **SeaweedFS** using `storage/Dockerfile`, with a persistent volume mounted at `/data`.
-   - **bot** built from this repository with `bot/Dockerfile`.
-
-3. Set the bot service variables from `.env.example` / your local `.env`:
-   `DISCORD_TOKEN`, `AI_API_KEY`, and any optional bot settings. Set storage S3
-   credentials to match the SeaweedFS service.
-
-4. Set the bot's `DATABASE_URL` to the Postgres service's **private** URL, using
-   the actual existing Postgres role, password, and database. For a database
-   created from the Railway template, reference its `DATABASE_URL` variable
-   rather than assuming `discord_bot` exists:
-
-   ```text
-   ${{Postgres.DATABASE_URL}}
-   ```
-
-   If the bot needs a different database/schema, create it in Postgres first.
-   Changing `POSTGRES_USER` or `POSTGRES_DB` variables does not change an
-   already-initialized Postgres volume.
-
-5. Set `SEAWEEDFS_ENDPOINT` to the service's private address, for example
-   `http://seaweedfs.railway.internal:8333`. Keep the bot, Postgres, and
-   SeaweedFS in the same Railway project/environment.
-
-6. Deploy from the repository root. The Railway CLI uploads this workspace; the
-   explicit `--path-as-root` avoids CLI indexing stalls seen in this setup:
-
-   ```bash
-   railway link
-   railway up --service bot --detach \\
-     --path-as-root "$PWD"
-   ```
-
-   If Railpack reports `No start command detected`, ensure the root
-   `package.json` has a `start` script that launches `bot/src/index.ts`:
-   `"start": "bun run bot/src/index.ts"`.
-
-### Redeploy and verify
+To run without Docker:
 
 ```bash
-railway up --service bot --detach --path-as-root "$PWD"
-railway service status --service bot
-railway logs --service bot --lines 100
-railway metrics --service bot --memory --since 1h
+bun install
+bun --env-file=.env run start
 ```
 
-Logs should show `logged in as ...`; successful message handling includes
-`[msg]`, database/persist timings, and `[sent]` when the bot replies. Postgres
-errors such as `Role "discord_bot" does not exist` mean the bot URL points to a
-role not present in the already-initialized database; use its actual Railway
-`DATABASE_URL` or create the role/database. The Compose startup migration setup
-is for Docker Compose and does not run on Railway.
+## Attachment handling
 
-**Back up persistent volumes before recreating Postgres.** Never put tokens or
-passwords in source control; configure them as Railway variables.
+Only attachment metadata (including names, types, sizes, descriptions and Discord URLs) is stored. The bot cannot read images, PDFs or audio; paste relevant content as text. No file archive, image summarization or transcription is implemented.
 
-## dev
+Image generation is separate: the prompt is sent to OpenRouter, and the generated image is posted to Discord when ready. One image task can run per channel, with a 90-second API deadline. Further image requests in that channel are rejected while it is busy; other channels and text replies continue independently. Results reply directly to Discord, not back to the Pi session. Tasks are process-local and do not survive a restart.
 
-`bun run dev` · `bun run check` (lint + format + types) · `bun run check:fix` · `bun run --cwd bot test`
+Text replies and reactions are sent only through explicit tools; the agent's final text is never posted. Response runs request cancellation after 120 seconds (not a guaranteed completion bound). Classification has an 8-second API timeout and web searches 10 seconds. Each response allows at most six tool calls. Generated mentions are intentionally allowed for this personal server.
+
+## Development checks
+
+```bash
+bun install
+bun run check
+bun run test
+```
+
+Runtime code lives in `bot/src/`: `infra/` handles AI and SQLite, `pipeline/` orchestrates messages and delivery, and `tools/` exposes agent capabilities. Experiments live in `bot/spike/`. `bot/Dockerfile.dockerignore` excludes tests and experiments from the production build context.
+
+Tests mock Discord and external APIs. The SQLite smoke check runs under Bun against a temporary database; no credentials are needed.

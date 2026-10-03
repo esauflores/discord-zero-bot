@@ -1,7 +1,8 @@
-import { recent, type MessageRow } from "@discord-zero-bot/database";
 import type { Message } from "discord.js";
 
-import { classifyMessage } from "./ai.ts";
+import { responseModel } from "../infra/ai.ts";
+import { recent } from "../infra/database.ts";
+import { classifyMessage } from "./classify.ts";
 import { deliver, type Effect } from "./effects.ts";
 import { record } from "./record.ts";
 import { respond } from "./respond.ts";
@@ -16,52 +17,24 @@ async function timed<T>(timings: Timings, name: string, run: () => T | Promise<T
   return result;
 }
 
-async function gate(message: Message, timings: Timings): Promise<{ chat: MessageRow[]; model: string } | null> {
-  // The bot's own replies are recorded for context but never answered.
+async function gate(message: Message, timings: Timings) {
+  console.log(`[msg] #${message.channelId} ${message.author.username}: ${message.content.slice(0, 80)}`);
   if (message.author.bot) return null;
 
-  const chat = await timed(timings, "db", () => recent(message.channelId, 11));
-  const previous = chat
+  const previous = (await timed(timings, "db", () => recent(message.channelId, 11)))
     .filter((entry) => entry.discord_id !== message.id)
-    .slice(0, 10)
-    .reverse();
-  const transcription = [...message.attachments.values()]
-    .map((attachment) => attachment.description)
-    .filter(Boolean)
-    .join("\n");
-  const classifiedMessage = transcription
-    ? Object.assign(Object.create(Object.getPrototypeOf(message)), message, {
-        content: [message.content, transcription].filter(Boolean).join("\n"),
-      })
-    : message;
-  const result = await timed(timings, "jev", () => classifyMessage(classifiedMessage, previous));
-  if (!result.addressed) return null;
-  console.log(`[thinking] #${message.channelId} message ${message.id} model=${result.model} (addressed)`);
-  return { chat, model: result.model };
+    .slice(0, 10);
+  const addressed = await timed(timings, "jev", () => classifyMessage(message, [...previous].reverse()));
+  if (!addressed) return null;
+  console.log(`[thinking] #${message.channelId} message ${message.id} model=${responseModel} (addressed)`);
+  return previous;
 }
 
-function enrich(message: Message, chat: MessageRow[]) {
-  const context = chat
-    .slice(0, 10)
+function enrich(message: Message, previous: Awaited<ReturnType<typeof recent>>) {
+  const context = [...previous]
     .reverse()
     .map((entry) => `${entry.author_name}: ${entry.content}`)
     .join("\n");
-  const promptFiles = [...message.attachments.values()]
-    .filter((attachment) => {
-      const type = attachment.contentType?.split(";")[0]?.toLowerCase();
-      const extension = attachment.name?.split(".").pop()?.toLowerCase();
-      return (
-        type?.startsWith("image/") ||
-        type === "application/pdf" ||
-        ["pdf", "csv", "xls", "xlsx", "ods", "ppt", "pptx", "odp"].includes(extension ?? "")
-      );
-    })
-    .map((attachment) => ({
-      url: attachment.url,
-      mediaType:
-        attachment.contentType?.split(";")[0]?.toLowerCase() ||
-        (attachment.name?.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream"),
-    }));
   const inProgress = pendingTasks(message.channelId)
     .map(
       ({ task, ageMs }) =>
@@ -69,8 +42,7 @@ function enrich(message: Message, chat: MessageRow[]) {
     )
     .join("");
   return {
-    promptFiles,
-    promptText: `Latest 10 messages for context:\n${context || "(none)"}\n\nDirected at you: yes\nCurrent message — ${message.author.username}: ${message.content || "(no text)"}${inProgress}`,
+    promptText: `Latest 10 messages for context:\n${context || "(none)"}\n\nDirected at you: yes\nCurrent message — ${message.author.username}: ${message.content || "(no text)"}${message.attachments.size ? `\nAttachments (metadata only; contents unavailable): ${[...message.attachments.values()].map((file) => `${file.name} (${file.contentType ?? "unknown type"}, ${file.size} bytes)`).join(", ")}` : ""}${inProgress}`,
   };
 }
 
@@ -80,20 +52,27 @@ function timingLine(message: Message, timings: Timings, steps: number): string {
 }
 
 export async function runChat(message: Message, receivedAt = Date.now()): Promise<void> {
+  const guildId = process.env.GUILD_ID;
+  const allowedChannels = (process.env.CHANNEL_IDS ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  if (!message.guildId || (guildId && message.guildId !== guildId)) return;
+  if (allowedChannels.length && !allowedChannels.includes(message.channelId)) return;
+  if (message.author.bot && message.author.id !== message.client.user.id) return;
+
   const timings: Timings = {};
   let steps = 0;
 
   await timed(timings, "persist", () => record(message));
   const route = await timed(timings, "gate", () => gate(message, timings));
   if (route) {
-    const prompt = await timed(timings, "enrich", () => enrich(message, route.chat));
+    const prompt = await timed(timings, "enrich", () => enrich(message, route));
     const effects: Effect[] = [];
     const state = { imageRequested: false };
-    const result = await timed(timings, "respond", () =>
-      respond({ message, model: route.model, effects, state, ...prompt }),
-    );
+    const result = await timed(timings, "respond", () => respond({ message, effects, state, ...prompt }));
     steps = result.steps;
-    await timed(timings, "deliver", () => deliver(message, effects, result.modelText, state.imageRequested));
+    await timed(timings, "deliver", () => deliver(message, effects, state.imageRequested));
   }
 
   timings.total = Date.now() - receivedAt;

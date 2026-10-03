@@ -8,14 +8,5 @@
   "scripts": {
     "test": "vitest run",
     "start": "bun --env-file=../.env run src/index.ts"
-  },
-  "dependencies": {
-    "@ai-sdk/openai-compatible": "^3.0.62",
-    "@discord-zero-bot/database": "workspace:*",
-    "@discord-zero-bot/storage": "workspace:*",
-    "@earendil-works/pi-coding-agent": "^0.99.2",
-    "ai": "^7.0.126",
-    "discord.js": "^14.19.3",
-    "typebox": "^1.3.34"
   }
 }

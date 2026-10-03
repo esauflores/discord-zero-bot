@@ -1,0 +1,341 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Discord Zero Bot",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1250,
+      680
+    ]
+  },
+  "components": [
+    {
+      "id": "discord-input",
+      "type": "external",
+      "label": "Discord",
+      "sublabel": "Guild messages",
+      "pos": [
+        25,
+        280
+      ],
+      "size": [
+        140,
+        70
+      ]
+    },
+    {
+      "id": "message-pipeline",
+      "type": "backend",
+      "label": "Message pipeline",
+      "sublabel": "Scope · record · classify",
+      "pos": [
+        255,
+        280
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "pi-agent",
+      "type": "backend",
+      "label": "Pi agent session",
+      "sublabel": "Five tools · six calls max",
+      "pos": [
+        610,
+        280
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "discord-delivery",
+      "type": "backend",
+      "label": "Discord delivery",
+      "sublabel": "Queued reply / reaction",
+      "pos": [
+        965,
+        280
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "jev-router",
+      "type": "external",
+      "label": "OpenRouter · Jev",
+      "sublabel": "Addressed classification · 8s",
+      "pos": [
+        255,
+        65
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "discord-output",
+      "type": "external",
+      "label": "Discord",
+      "sublabel": "Replies · reactions · images",
+      "pos": [
+        965,
+        65
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "sqlite-memory",
+      "type": "database",
+      "label": "SQLite memory",
+      "sublabel": "Latest 1,000 messages",
+      "pos": [
+        255,
+        510
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "router-models",
+      "type": "external",
+      "label": "OpenRouter · DeepSeek",
+      "sublabel": "Response generation",
+      "pos": [
+        610,
+        65
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "brave-search",
+      "type": "external",
+      "label": "Brave Search",
+      "sublabel": "Optional · 10s timeout",
+      "pos": [
+        610,
+        510
+      ],
+      "size": [
+        190,
+        70
+      ]
+    },
+    {
+      "id": "image-task",
+      "type": "backend",
+      "label": "Background image",
+      "sublabel": "OpenRouter Muse · 90s",
+      "pos": [
+        965,
+        510
+      ],
+      "size": [
+        190,
+        70
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "gateway-event",
+      "from": "discord-input",
+      "to": "message-pipeline",
+      "label": "Gateway event",
+      "variant": "emphasis"
+    },
+    {
+      "id": "addressed-message",
+      "from": "message-pipeline",
+      "to": "pi-agent",
+      "label": "Addressed + context",
+      "variant": "emphasis"
+    },
+    {
+      "id": "explicit-effects",
+      "from": "pi-agent",
+      "to": "discord-delivery",
+      "label": "Explicit tool effects",
+      "variant": "emphasis"
+    },
+    {
+      "id": "persist-context",
+      "from": "message-pipeline",
+      "to": "sqlite-memory",
+      "label": "Save / recent",
+      "labelAt": [
+        295,
+        405
+      ]
+    },
+    {
+      "id": "classification-api",
+      "from": "message-pipeline",
+      "to": "jev-router",
+      "label": "Classify",
+      "labelAt": [
+        295,
+        235
+      ]
+    },
+    {
+      "id": "response-api",
+      "from": "pi-agent",
+      "to": "router-models",
+      "label": "Response model",
+      "labelAt": [
+        645,
+        235
+      ]
+    },
+    {
+      "id": "read-memory",
+      "from": "pi-agent",
+      "to": "sqlite-memory",
+      "label": "read_chat",
+      "labelAt": [
+        480,
+        395
+      ]
+    },
+    {
+      "id": "publish-effects",
+      "from": "discord-delivery",
+      "to": "discord-output",
+      "label": "Reply / react"
+    },
+    {
+      "id": "publish-image",
+      "from": "image-task",
+      "to": "discord-output",
+      "label": "Image reply",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "right",
+      "via": [
+        [
+          1195,
+          545
+        ],
+        [
+          1195,
+          100
+        ]
+      ]
+    },
+    {
+      "id": "external-search",
+      "from": "pi-agent",
+      "to": "brave-search",
+      "label": "web_search",
+      "labelAt": [
+        650,
+        400
+      ]
+    },
+    {
+      "id": "start-image",
+      "from": "pi-agent",
+      "to": "image-task",
+      "label": "generate_image",
+      "variant": "dashed"
+    },
+    {
+      "id": "persist-context-return",
+      "from": "sqlite-memory",
+      "to": "message-pipeline",
+      "label": "Recent context",
+      "variant": "dashed",
+      "labelAt": [
+        410,
+        460
+      ]
+    },
+    {
+      "id": "classification-api-return",
+      "from": "jev-router",
+      "to": "message-pipeline",
+      "label": "Decision",
+      "variant": "dashed",
+      "labelAt": [
+        410,
+        175
+      ]
+    },
+    {
+      "id": "response-api-return",
+      "from": "router-models",
+      "to": "pi-agent",
+      "label": "Model output",
+      "variant": "dashed",
+      "labelAt": [
+        765,
+        175
+      ]
+    },
+    {
+      "id": "read-memory-return",
+      "from": "sqlite-memory",
+      "to": "pi-agent",
+      "label": "History results",
+      "variant": "dashed",
+      "labelAt": [
+        580,
+        455
+      ]
+    },
+    {
+      "id": "external-search-return",
+      "from": "brave-search",
+      "to": "pi-agent",
+      "label": "Search results",
+      "variant": "dashed",
+      "labelAt": [
+        770,
+        465
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Small deployment",
+      "items": [
+        "One Bun container; SQLite on a persistent volume.",
+        "Guild/channel filters apply before storage and responses."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Controlled output",
+      "items": [
+        "Final agent text is never posted; tools queue reply/reaction.",
+        "Cancellation requested after 120s; attachments are metadata-only."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Background images",
+      "items": [
+        "One image task per channel; result replies directly to Discord.",
+        "Tasks are process-local and do not survive restart."
+      ]
+    }
+  ]
+}

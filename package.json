@@ -1,17 +1,17 @@
 {
   "name": "discord-zero-bot",
   "private": true,
-  "workspaces": [
-    "database",
-    "storage",
-    "bot"
-  ],
   "type": "module",
   "scripts": {
-    "check": "oxlint && oxfmt --check && tsc -p database && tsc -p storage && tsc -p bot",
-    "check:fix": "oxlint --fix && oxfmt --write",
-    "dev": "docker compose up -d database storage && cd bot && bun run start",
-    "start": "bun run bot/src/index.ts"
+    "check": "oxlint bot/src && oxfmt --check bot/src package.json docker-compose.yml && tsc -p bot/tsconfig.src.json",
+    "test": "bun run --cwd bot test && bun bot/tests/database.smoke.ts",
+    "check:fix": "oxlint bot/src --fix && oxfmt --write bot/src package.json docker-compose.yml",
+    "start": "bun --smol run bot/src/index.ts"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^1.0.0",
+    "discord.js": "^14.27.0",
+    "typebox": "^1.3.34"
   },
   "devDependencies": {
     "bun-types": "^1.4.2",

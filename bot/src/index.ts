@@ -1,12 +1,10 @@
 #!/usr/bin/env bun
-import { closeDb } from "@discord-zero-bot/database";
 import { Client, Events, GatewayIntentBits } from "discord.js";
 
-import { execute as onMessageCreate } from "./events/messageCreate.ts";
+import { closeDb } from "./infra/database.ts";
+import { runChat } from "./pipeline/index.ts";
 
-export { runChat } from "./pipeline/index.ts";
-
-export const client = new Client({
+const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
 });
 
@@ -14,7 +12,7 @@ client.on("error", (error) => console.error("Discord client error:", error));
 client.on("warn", (warning) => console.warn("Discord client warning:", warning));
 client.once(Events.ClientReady, (ready) => console.log(`logged in as ${ready.user.tag}`));
 client.on(Events.MessageCreate, (message) => {
-  void onMessageCreate(message).catch((error: unknown) => console.error(`Error in ${Events.MessageCreate}:`, error));
+  void runChat(message).catch((error: unknown) => console.error(`Error in ${Events.MessageCreate}:`, error));
 });
 
 const token = process.env.DISCORD_TOKEN;
@@ -30,7 +28,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
     void (async () => {
       try {
         await client.destroy();
-        await closeDb();
+        closeDb();
       } catch (error) {
         console.error("Error during shutdown:", error);
         process.exitCode = 1;

@@ -1,8 +1,0 @@
-{
-  "name": "@discord-zero-bot/storage",
-  "private": true,
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  }
-}
