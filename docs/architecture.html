@@ -5160,11 +5160,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
         <!-- Connection paths (before components for correct z-order) -->
         <path data-edge-from="discord-input" data-edge-to="message-pipeline" data-edge-label="Gateway event" data-edge-key="0" data-edge-id="gateway-event" data-composition-points="165,315;255,315" d="M 165 315 L 255 315" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="message-pipeline" data-edge-to="pi-agent" data-edge-label="Addressed + context" data-edge-key="1" data-edge-id="addressed-message" data-composition-points="445,315;610,315" d="M 445 315 L 610 315" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="message-pipeline" data-edge-to="pi-agent" data-edge-label="Context + attachments" data-edge-key="1" data-edge-id="addressed-message" data-composition-points="445,315;610,315" d="M 445 315 L 610 315" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="pi-agent" data-edge-to="discord-delivery" data-edge-label="Explicit tool effects" data-edge-key="2" data-edge-id="explicit-effects" data-composition-points="800,308;965,308" d="M 800 308 L 965 308" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="message-pipeline" data-edge-to="sqlite-memory" data-edge-label="Save / recent" data-edge-key="3" data-edge-id="persist-context" data-composition-points="350,350;350,510" d="M 350 350 L 350 510" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="message-pipeline" data-edge-to="jev-router" data-edge-label="Classify" data-edge-key="4" data-edge-id="classification-api" data-composition-points="350,280;350,135" d="M 350 280 L 350 135" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="pi-agent" data-edge-to="router-models" data-edge-label="Response model" data-edge-key="5" data-edge-id="response-api" data-composition-points="705,280;705,135" d="M 705 280 L 705 135" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="pi-agent" data-edge-to="router-models" data-edge-label="Text / images / PDFs" data-edge-key="5" data-edge-id="response-api" data-composition-points="705,280;705,135" d="M 705 280 L 705 135" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="pi-agent" data-edge-to="sqlite-memory" data-edge-label="read_chat" data-edge-key="6" data-edge-id="read-memory" data-composition-points="610,315;527.5,315;527.5,545;445,545" d="M 610 315 L 535.5 315 Q 527.5 315 527.5 323 L 527.5 537 Q 527.5 545 519.5 545 L 445 545" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="discord-delivery" data-edge-to="discord-output" data-edge-label="Reply / react" data-edge-key="7" data-edge-id="publish-effects" data-composition-points="1060,280;1060,135" d="M 1060 280 L 1060 135" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="image-task" data-edge-to="discord-output" data-edge-label="Image reply" data-edge-key="8" data-edge-id="publish-image" data-composition-points="1155,545;1195,545;1195,100;1155,100" d="M 1155 545 L 1187 545 Q 1195 545 1195 537 L 1195 108 Q 1195 100 1187 100 L 1155 100" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
@@ -5258,8 +5258,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="context" x="350" y="559" class="t-muted" font-size="9" text-anchor="middle">Latest 1,000 messages</text>
         </g>
 
-        <g id="node-router-models" data-node-id="router-models" data-node-label="OpenRouter · DeepSeek" tabindex="0" role="button" aria-label="Focus OpenRouter · DeepSeek, Response generation, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="Response generation" data-node-context="Architecture component">
-          <title>OpenRouter · DeepSeek · Response generation · Architecture component</title>
+        <g id="node-router-models" data-node-id="router-models" data-node-label="OpenRouter · DeepSeek" tabindex="0" role="button" aria-label="Focus OpenRouter · DeepSeek, Vision · PDF OCR via file-parser, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="Vision · PDF OCR via file-parser" data-node-context="Architecture component">
+          <title>OpenRouter · DeepSeek · Vision · PDF OCR via file-parser · Architecture component</title>
           <rect x="610" y="65" width="190" height="70" rx="6" class="c-mask"/>
           <rect x="610" y="65" width="190" height="70" rx="6" class="c-external" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(616 71) scale(0.6875)">
@@ -5267,7 +5267,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="705" y="98" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">OpenRouter · DeepSeek</text>
-        <text data-detail="context" x="705" y="114" class="t-muted" font-size="9" text-anchor="middle">Response generation</text>
+        <text data-detail="context" x="705" y="114" class="t-muted" font-size="9" text-anchor="middle">Vision · PDF OCR via file-parser</text>
         </g>
 
         <g id="node-brave-search" data-node-id="brave-search" data-node-label="Brave Search" tabindex="0" role="button" aria-label="Focus Brave Search, Optional · 10s timeout, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="Optional · 10s timeout" data-node-context="Architecture component">
@@ -5298,9 +5298,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="173.8" y="295" width="72.4" height="14" rx="3" class="c-mask"/>
           <text x="210" y="305" class="t-backend" font-size="8" text-anchor="middle">Gateway event</text>
         </g>
-        <g data-detail="context" data-edge-from="message-pipeline" data-edge-to="pi-agent" data-edge-label="Addressed + context" data-edge-key="1" data-edge-id="addressed-message">
-          <rect x="476.9" y="295" width="101.2" height="14" rx="3" class="c-mask"/>
-          <text x="527.5" y="305" class="t-backend" font-size="8" text-anchor="middle">Addressed + context</text>
+        <g data-detail="context" data-edge-from="message-pipeline" data-edge-to="pi-agent" data-edge-label="Context + attachments" data-edge-key="1" data-edge-id="addressed-message">
+          <rect x="472.1" y="295" width="110.8" height="14" rx="3" class="c-mask"/>
+          <text x="527.5" y="305" class="t-backend" font-size="8" text-anchor="middle">Context + attachments</text>
         </g>
         <g data-detail="context" data-edge-from="pi-agent" data-edge-to="discord-delivery" data-edge-label="Explicit tool effects" data-edge-key="2" data-edge-id="explicit-effects">
           <rect x="827.1" y="288" width="110.8" height="14" rx="3" class="c-mask"/>
@@ -5314,9 +5314,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="270.8" y="225" width="48.4" height="14" rx="3" class="c-mask"/>
           <text x="295" y="235" class="t-muted" font-size="8" text-anchor="middle">Classify</text>
         </g>
-        <g data-detail="context" data-edge-from="pi-agent" data-edge-to="router-models" data-edge-label="Response model" data-edge-key="5" data-edge-id="response-api">
-          <rect x="606.4" y="225" width="77.2" height="14" rx="3" class="c-mask"/>
-          <text x="645" y="235" class="t-muted" font-size="8" text-anchor="middle">Response model</text>
+        <g data-detail="context" data-edge-from="pi-agent" data-edge-to="router-models" data-edge-label="Text / images / PDFs" data-edge-key="5" data-edge-id="response-api">
+          <rect x="592" y="225" width="106" height="14" rx="3" class="c-mask"/>
+          <text x="645" y="235" class="t-muted" font-size="8" text-anchor="middle">Text / images / PDFs</text>
         </g>
         <g data-detail="context" data-edge-from="pi-agent" data-edge-to="sqlite-memory" data-edge-label="read_chat" data-edge-key="6" data-edge-id="read-memory">
           <rect x="453.4" y="385" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
@@ -5582,18 +5582,21 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </div>
         <ul>
           <li>&bull; Final agent text is never posted; tools queue reply/reaction.</li>
-          <li>&bull; Cancellation requested after 120s; attachments are metadata-only.</li>
+          <li>&bull; Cancellation requested after 120s; no final-text fallback.</li>
+          <li>&bull; One background image task per channel; replies directly to Discord.</li>
+          <li>&bull; Image tasks are process-local and do not survive restart.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
-          <div class="card-dot amber"></div>
-          <h3>Background images</h3>
+          <div class="card-dot cyan"></div>
+          <h3>Incoming attachments</h3>
         </div>
         <ul>
-          <li>&bull; One image task per channel; result replies directly to Discord.</li>
-          <li>&bull; Tasks are process-local and do not survive restart.</li>
+          <li>&bull; Current-message images enter Pi; PDFs use OpenRouter file-parser / mistral-ocr.</li>
+          <li>&bull; Discord CDN only: 3 files / 5 MiB total; 10s download timeout per file.</li>
+          <li>&bull; Only metadata is stored; historical files, audio and failed downloads remain unread.</li>
         </ul>
       </div>
     </div>

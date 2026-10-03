@@ -113,7 +113,7 @@
       "id": "router-models",
       "type": "external",
       "label": "OpenRouter · DeepSeek",
-      "sublabel": "Response generation",
+      "sublabel": "Vision · PDF OCR via file-parser",
       "pos": [
         610,
         65
@@ -164,7 +164,7 @@
       "id": "addressed-message",
       "from": "message-pipeline",
       "to": "pi-agent",
-      "label": "Addressed + context",
+      "label": "Context + attachments",
       "variant": "emphasis"
     },
     {
@@ -198,7 +198,7 @@
       "id": "response-api",
       "from": "pi-agent",
       "to": "router-models",
-      "label": "Response model",
+      "label": "Text / images / PDFs",
       "labelAt": [
         645,
         235
@@ -326,15 +326,18 @@
       "title": "Controlled output",
       "items": [
         "Final agent text is never posted; tools queue reply/reaction.",
-        "Cancellation requested after 120s; attachments are metadata-only."
+        "Cancellation requested after 120s; no final-text fallback.",
+        "One background image task per channel; replies directly to Discord.",
+        "Image tasks are process-local and do not survive restart."
       ]
     },
     {
-      "dot": "amber",
-      "title": "Background images",
+      "dot": "cyan",
+      "title": "Incoming attachments",
       "items": [
-        "One image task per channel; result replies directly to Discord.",
-        "Tasks are process-local and do not survive restart."
+        "Current-message images enter Pi; PDFs use OpenRouter file-parser / mistral-ocr.",
+        "Discord CDN only: 3 files / 5 MiB total; 10s download timeout per file.",
+        "Only metadata is stored; historical files, audio and failed downloads remain unread."
       ]
     }
   ]
