@@ -6,9 +6,9 @@
   "status": "skipped",
   "visualReview": "pending",
   "artifact": {
-    "path": "/home/esauflores/Projects/active/discord-zero-bot/docs/architecture.html",
-    "sha256": "6773915ba4aa339851c3aec7c9d8cbf17f59b4ab5a53b992358feeb35bd5bc5a",
-    "bytes": 807699
+    "path": "/home/esauflores/Projects/archived/discord-zero-bot/docs/architecture.html",
+    "sha256": "e864c5f033178adf90af3d88686021f9439c4ae76ec35d6472512b57bf5f4363",
+    "bytes": 816145
   },
   "state": {
     "detail": "read",
@@ -24,7 +24,7 @@
       "severity": "warning",
       "message": "Chrome or Chromium is unavailable. Set ARCHIFY_CHROME to its executable path.",
       "subject": {
-        "artifact": "/home/esauflores/Projects/active/discord-zero-bot/docs/architecture.html"
+        "artifact": "/home/esauflores/Projects/archived/discord-zero-bot/docs/architecture.html"
       },
       "evidence": {
         "executable": null

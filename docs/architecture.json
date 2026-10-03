@@ -43,7 +43,7 @@
       "id": "pi-agent",
       "type": "backend",
       "label": "Pi agent session",
-      "sublabel": "Five tools · six calls max",
+      "sublabel": "Five tools · thirty calls max",
       "pos": [
         610,
         280
