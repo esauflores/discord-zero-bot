@@ -3,7 +3,7 @@ import type { Message } from "discord.js";
 import { responseModel } from "../infra/ai.ts";
 import { recent } from "../infra/database.ts";
 import { classifyMessage } from "./classify.ts";
-import { deliver, type Effect } from "./effects.ts";
+import { deliver, showTyping, type Effect } from "./effects.ts";
 import { record } from "./record.ts";
 import { respond } from "./respond.ts";
 import { pendingTasks } from "./tasks.ts";
@@ -67,12 +67,17 @@ export async function runChat(message: Message, receivedAt = Date.now()): Promis
   await timed(timings, "persist", () => record(message));
   const route = await timed(timings, "gate", () => gate(message, timings));
   if (route) {
-    const prompt = await timed(timings, "enrich", () => enrich(message, route));
-    const effects: Effect[] = [];
-    const state = { imageRequested: false };
-    const result = await timed(timings, "respond", () => respond({ message, effects, state, ...prompt }));
-    steps = result.steps;
-    await timed(timings, "deliver", () => deliver(message, effects, state.imageRequested));
+    const stopTyping = showTyping(message);
+    try {
+      const prompt = await timed(timings, "enrich", () => enrich(message, route));
+      const effects: Effect[] = [];
+      const state = { imageRequested: false };
+      const result = await timed(timings, "respond", () => respond({ message, effects, state, ...prompt }));
+      steps = result.steps;
+      await timed(timings, "deliver", () => deliver(message, effects, state.imageRequested));
+    } finally {
+      stopTyping();
+    }
   }
 
   timings.total = Date.now() - receivedAt;

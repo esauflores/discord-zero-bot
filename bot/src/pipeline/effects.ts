@@ -44,6 +44,18 @@ export function queueReaction(effects: Effect[], emoji: string): string | null {
   return null;
 }
 
+/**
+ * Shows the Discord "typing…" indicator while the bot works, and keeps it alive until
+ * the returned stop is called (Discord drops it after ~10s, so it refreshes).
+ */
+export function showTyping(message: Message): () => void {
+  const channel = message.channel;
+  if (!("sendTyping" in channel)) return () => {}; // PartialGroupDMChannel has no typing indicator
+  channel.sendTyping().catch(() => {});
+  const timer = setInterval(() => void channel.sendTyping().catch(() => {}), 8_000);
+  return () => clearInterval(timer);
+}
+
 /** Publishes only queued effects, never the agent's final text. */
 export async function deliver(
   message: Message,

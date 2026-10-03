@@ -90,6 +90,7 @@ function message(
     attachments: new Map(),
     reply: vi.fn().mockResolvedValue(undefined),
     react: vi.fn().mockResolvedValue(undefined),
+    channel: { sendTyping: vi.fn().mockResolvedValue(undefined) },
     ...overrides,
   } as unknown as Message;
 }

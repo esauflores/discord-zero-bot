@@ -1,6 +1,23 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
-import { queueReaction, queueReply, type Effect } from "@/pipeline/effects.ts";
+import { queueReaction, queueReply, showTyping, type Effect } from "@/pipeline/effects.ts";
+
+it("keeps the typing indicator alive until stopped", () => {
+  vi.useFakeTimers();
+  try {
+    const sendTyping = vi.fn().mockResolvedValue(undefined);
+    const message = { channel: { sendTyping } } as never;
+    const stop = showTyping(message);
+    expect(sendTyping).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(24_000);
+    expect(sendTyping).toHaveBeenCalledTimes(4);
+    stop();
+    vi.advanceTimersByTime(24_000);
+    expect(sendTyping).toHaveBeenCalledTimes(4);
+  } finally {
+    vi.useRealTimers();
+  }
+});
 
 it("fuzzes empty input, length limits and duplicate calls (seed 42)", () => {
   let seed = 42;
