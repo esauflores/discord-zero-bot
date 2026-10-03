@@ -255,11 +255,11 @@ it("records its own replies but ignores other bots before storage", async () => 
   expect(mocks.classify).not.toHaveBeenCalled();
 });
 
-it("refuses a seventh tool call and disposes the session without delivery", async () => {
+it("refuses a thirty-first tool call and disposes the session without delivery", async () => {
   const msg = message();
   mocks.run.mockImplementationOnce(async (tools: PiTool[]) => {
-    for (let i = 0; i < 6; i++) await call(tools, "respond_in_discord", { text: "hi" });
-    expect(() => call(tools, "respond_in_discord", { text: "seventh" })).toThrow("tool-call limit");
+    for (let i = 0; i < 30; i++) await call(tools, "respond_in_discord", { text: "hi" });
+    expect(() => call(tools, "respond_in_discord", { text: "thirty-first" })).toThrow("tool-call limit");
   });
   await expect(onMessageCreate(msg)).rejects.toThrow("tool-call limit");
   expect(mocks.dispose).toHaveBeenCalledOnce();

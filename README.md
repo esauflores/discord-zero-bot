@@ -37,7 +37,7 @@ Only attachment metadata is stored in SQLite. For addressed messages, up to thre
 
 Image generation is separate: the prompt is sent to OpenRouter, and the generated image is posted to Discord when ready. One image task can run per channel, with a 90-second API deadline. Further image requests in that channel are rejected while it is busy; other channels and text replies continue independently. Results reply directly to Discord, not back to the Pi session. Tasks are process-local and do not survive a restart.
 
-Text replies and reactions are sent only through explicit tools; the agent's final text is never posted. Response runs request cancellation after 120 seconds (not a guaranteed completion bound). Classification has an 8-second API timeout and web searches 10 seconds. Each response allows at most six tool calls. Generated mentions are intentionally allowed for this personal server.
+Text replies and reactions are sent only through explicit tools; the agent's final text is never posted. Response runs request cancellation after 120 seconds (not a guaranteed completion bound). Classification has an 8-second API timeout and web searches 10 seconds. Each response allows at most 30 tool calls. Generated mentions are intentionally allowed for this personal server.
 
 ## Development checks
 

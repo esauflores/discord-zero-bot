@@ -34,7 +34,7 @@ Never read or expose `.env` secrets. Use `.env.example` for configuration docume
 - Final model text is never published. Text and reactions go through explicit tools and centralized delivery.
 - Generated mentions are intentionally allowed on this personal server. Do not change that policy unrequested.
 - Reaction validation rejects empty input; Discord validates the emoji. Do not reintroduce Unicode character-count limits.
-- At most six tool calls per response. Request Pi cancellation after 120 seconds; this is not a hard completion guarantee. No extra timeout infrastructure is wanted.
+- At most 30 tool calls per response. Request Pi cancellation after 120 seconds; this is not a hard completion guarantee. No extra timeout infrastructure is wanted.
 - Jev API timeout: 8 seconds. Brave search timeout: 10 seconds. Image API timeout: 90 seconds.
 - One background image task per channel; reject further image requests while busy. Other channels and text replies continue. Image results/failures reply directly to Discord, not to Pi. Tasks do not survive restart; do not add a durable queue speculatively.
 

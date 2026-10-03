@@ -39,7 +39,7 @@ export async function respond(input: RespondInput): Promise<{ steps: number }> {
   for (const tool of tools) {
     const execute = tool.execute.bind(tool);
     tool.execute = (id, params, signal, onUpdate, toolContext) => {
-      if (++calls > 6) throw new Error("Pi tool-call limit reached (6)");
+      if (++calls > 30) throw new Error("Pi tool-call limit reached (30)");
       return execute(id, params, signal, onUpdate, toolContext);
     };
   }
@@ -93,7 +93,7 @@ export async function respond(input: RespondInput): Promise<{ steps: number }> {
       },
     );
     if (timedOut) throw new Error("Pi response timed out (120s)");
-    if (calls > 6) throw new Error("Pi tool-call limit reached (6)");
+    if (calls > 30) throw new Error("Pi tool-call limit reached (30)");
     const assistants = session.messages.filter((entry) => entry.role === "assistant");
     const last = assistants.at(-1);
     const hasFinalText = last?.content?.some((part) => part.type === "text" && part.text.trim().length > 0) ?? false;
