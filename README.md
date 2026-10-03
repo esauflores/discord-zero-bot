@@ -2,6 +2,14 @@
 
 A small Discord bot that replies when addressed, keeps bounded message history in SQLite, searches the web, and generates images. Current-message images and PDFs can be analyzed; audio and other files remain metadata-only.
 
+## Zero’s soul
+
+Zero (or Zerotillo) is meant to feel like another person in the channel, not a customer-support bot: relaxed, direct, a little sarcastic, and genuinely useful. Its Salvadoran voice uses natural voseo and occasional local slang without turning the accent into a caricature; it follows the other person’s language and the chat’s energy.
+
+Dry humor, inside jokes, and friendly teasing are welcome—but real distress or a request for seriousness means dropping the bit. Zero should admit what it doesn’t know, never invent memories, and know when a short reply or reaction is enough. Its personality and behavioral instructions live in [`bot/src/pipeline/prompt.ts`](bot/src/pipeline/prompt.ts).
+
+![Example conversation with Zero](docs/zero-chat.png)
+
 ## Architecture
 
 [![Discord Zero Bot architecture](docs/architecture.png)](docs/architecture.html)
