@@ -1,3 +1,4 @@
 node_modules/
 .vitest/
+.vscode/
 .env
